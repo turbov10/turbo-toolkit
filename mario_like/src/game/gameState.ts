@@ -1,0 +1,272 @@
+// Pure state-machine logic. App.tsx owns the state and calls `updateGameState`
+// once per tick.
+//
+// Quit is intentionally NOT handled here — App.tsx watches for Q globally and
+// calls Ink's `useApp().exit()`. That keeps the state machine free of side
+// effects beyond optional audio (BEL).
+
+import type { Enemy, GameState, InputState, Level, Player } from './types';
+import { WORLD_COUNT, getLevel } from './levels';
+import {
+  DEFAULT_AUDIO,
+  ENEMY_SPEED,
+  INITIAL_LIVES,
+  LEVEL_CLEAR_DURATION_MS,
+  LEVEL_INTRO_DURATION_MS,
+  PLAYER_DEAD_DURATION_MS,
+} from './constants';
+import { aabbOverlap } from './collision';
+import {
+  applyGravity,
+  applyInputToPlayer,
+  movePlayerWithCollision,
+  updateCamera,
+  updateEnemies,
+} from './physics';
+
+// ---------------------------------------------------------------------------
+// Audio helper
+// ---------------------------------------------------------------------------
+
+function beep(audio: boolean): void {
+  if (!audio) return;
+  // \x07 is BEL. It is inaudible in most modern terminals but harmless.
+  process.stdout.write('\x07');
+}
+
+// ---------------------------------------------------------------------------
+// Construction
+// ---------------------------------------------------------------------------
+
+function makePlayer(level: Level): Player {
+  return {
+    x: level.playerStart.x,
+    y: level.playerStart.y,
+    vx: 0,
+    vy: 0,
+    width: 1,
+    height: 1,
+    facing: 'right',
+    onGround: false,
+  };
+}
+
+function makeEnemies(level: Level, levelIndex: number): Enemy[] {
+  return level.enemyStarts.map((e, i) => ({
+    id: `enemy-${levelIndex}-${i}`,
+    type: 'mushroom',
+    x: e.x,
+    y: e.y,
+    vx: ENEMY_SPEED,
+    direction: -1,
+    width: 1,
+    height: 1,
+  }));
+}
+
+export function resetGame(): GameState {
+  const level = getLevel(0);
+  return {
+    status: 'START_SCREEN',
+    levelIndex: 0,
+    lives: INITIAL_LIVES,
+    deaths: 0,
+    clearedLevels: 0,
+    player: makePlayer(level),
+    enemies: makeEnemies(level, 0),
+    camera: { x: 0, y: 0 },
+    level,
+    statusStartTime: 0,
+    audio: DEFAULT_AUDIO,
+  };
+}
+
+/** Reset the player / enemies / camera to the start of the current level. */
+export function resetCurrentLevel(state: GameState): GameState {
+  const level = getLevel(state.levelIndex);
+  return {
+    ...state,
+    player: makePlayer(level),
+    enemies: makeEnemies(level, state.levelIndex),
+    camera: { x: 0, y: 0 },
+    level,
+  };
+}
+
+function goToNextLevel(state: GameState, now: number): GameState {
+  const nextIndex = state.levelIndex + 1;
+  if (nextIndex >= WORLD_COUNT) {
+    beep(state.audio);
+    return {
+      ...state,
+      status: 'GAME_WIN',
+      statusStartTime: now,
+    };
+  }
+  const base: GameState = {
+    ...state,
+    levelIndex: nextIndex,
+    clearedLevels: state.clearedLevels + 1,
+    status: 'LEVEL_INTRO',
+    statusStartTime: now,
+  };
+  return resetCurrentLevel(base);
+}
+
+// ---------------------------------------------------------------------------
+// Per-state transitions
+// ---------------------------------------------------------------------------
+
+function handleStartScreen(state: GameState, input: InputState, now: number): GameState {
+  if (input.enterPressed) {
+    const base: GameState = {
+      ...state,
+      status: 'LEVEL_INTRO',
+      statusStartTime: now,
+    };
+    return resetCurrentLevel(base);
+  }
+  return state;
+}
+
+function handleLevelIntro(state: GameState, now: number): GameState {
+  if (now - state.statusStartTime >= LEVEL_INTRO_DURATION_MS) {
+    return { ...state, status: 'PLAYING', statusStartTime: now };
+  }
+  return state;
+}
+
+function handlePlaying(state: GameState, input: InputState, now: number): GameState {
+  if (input.pausePressed) {
+    return { ...state, status: 'PAUSED', statusStartTime: now };
+  }
+
+  // Step the simulation.
+  const player = { ...state.player };
+  const enemies = state.enemies.map((e) => ({ ...e }));
+  const camera = { ...state.camera };
+  const level = state.level;
+
+  const wasOnGround = player.onGround;
+  applyInputToPlayer(player, input.left, input.right, input.jumpPressed);
+  if (input.jumpPressed && wasOnGround) {
+    beep(state.audio);
+  }
+  applyGravity(player);
+  movePlayerWithCollision(player, level);
+  updateEnemies(enemies, level);
+  updateCamera(camera, player, level);
+
+  // Player vs enemies.
+  for (const enemy of enemies) {
+    if (aabbOverlap(player, enemy)) {
+      beep(state.audio);
+      return {
+        ...state,
+        status: 'PLAYER_DEAD',
+        lives: state.lives - 1,
+        deaths: state.deaths + 1,
+        statusStartTime: now,
+        player,
+        enemies,
+        camera,
+      };
+    }
+  }
+
+  // Player reached the goal.
+  if (aabbOverlap(player, { x: level.goal.x, y: level.goal.y, width: 1, height: 1 })) {
+    beep(state.audio);
+    return {
+      ...state,
+      status: 'LEVEL_CLEAR',
+      statusStartTime: now,
+      player,
+      enemies,
+      camera,
+    };
+  }
+
+  // Player fell out of the world.
+  if (player.y >= level.height) {
+    beep(state.audio);
+    return {
+      ...state,
+      status: 'PLAYER_DEAD',
+      lives: state.lives - 1,
+      deaths: state.deaths + 1,
+      statusStartTime: now,
+      player,
+      enemies,
+      camera,
+    };
+  }
+
+  return { ...state, player, enemies, camera };
+}
+
+function handlePaused(state: GameState, input: InputState, now: number): GameState {
+  if (input.pausePressed || input.enterPressed) {
+    return { ...state, status: 'PLAYING', statusStartTime: now };
+  }
+  if (input.skipPressed) {
+    // skipPressed == "M" in the pause screen → toggle audio.
+    return { ...state, audio: !state.audio };
+  }
+  return state;
+}
+
+function handleLevelClear(state: GameState, input: InputState, now: number): GameState {
+  const elapsed = now - state.statusStartTime;
+  if (input.skipPressed || input.enterPressed || elapsed >= LEVEL_CLEAR_DURATION_MS) {
+    return goToNextLevel(state, now);
+  }
+  return state;
+}
+
+function handlePlayerDead(state: GameState, input: InputState, now: number): GameState {
+  const elapsed = now - state.statusStartTime;
+  if (input.skipPressed || input.enterPressed || elapsed >= PLAYER_DEAD_DURATION_MS) {
+    if (state.lives <= 0) {
+      return { ...state, status: 'GAME_OVER', statusStartTime: now };
+    }
+    // Restart the current level and show the intro again.
+    return resetCurrentLevel({ ...state, status: 'LEVEL_INTRO', statusStartTime: now });
+  }
+  return state;
+}
+
+function handleGameOver(state: GameState, input: InputState): GameState {
+  if (input.restartPressed) return resetGame();
+  return state;
+}
+
+function handleGameWin(state: GameState, input: InputState): GameState {
+  if (input.restartPressed) return resetGame();
+  return state;
+}
+
+// ---------------------------------------------------------------------------
+// Public entry point
+// ---------------------------------------------------------------------------
+
+export function updateGameState(state: GameState, input: InputState, now: number): GameState {
+  switch (state.status) {
+    case 'START_SCREEN':
+      return handleStartScreen(state, input, now);
+    case 'LEVEL_INTRO':
+      return handleLevelIntro(state, now);
+    case 'PLAYING':
+      return handlePlaying(state, input, now);
+    case 'PAUSED':
+      return handlePaused(state, input, now);
+    case 'LEVEL_CLEAR':
+      return handleLevelClear(state, input, now);
+    case 'PLAYER_DEAD':
+      return handlePlayerDead(state, input, now);
+    case 'GAME_OVER':
+      return handleGameOver(state, input);
+    case 'GAME_WIN':
+      return handleGameWin(state, input);
+  }
+}
