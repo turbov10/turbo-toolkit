@@ -1,0 +1,29 @@
+.page--calc {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #0b0d12;
+  background-image: radial-gradient(
+      circle at 10% -10%,
+      rgba(255, 159, 10, 0.12),
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 110% 110%,
+      rgba(106, 130, 251, 0.1),
+      transparent 50%
+    );
+  background-attachment: fixed;
+}
+
+.calc-footer {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 16px;
+}
+
+.calc-footer__hint {
+  font-size: 11px;
+  color: #4a5060;
+  letter-spacing: 0.5px;
+}

@@ -1,0 +1,80 @@
+{
+  "name": "calculator",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cross-platform calculator (WeChat Mini Program + macOS/Windows desktop) built with Taro 4 + Tauri 2",
+  "scripts": {
+    "dev:weapp": "taro build --type weapp --watch",
+    "dev:h5": "taro build --type h5 --watch",
+    "build:weapp": "taro build --type weapp",
+    "build:h5": "taro build --type h5",
+    "build:tauri": "pnpm build:h5 && tauri build",
+    "dev:tauri": "pnpm build:h5 && tauri dev",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "typecheck": "tsc --noEmit",
+    "gen:icons": "node scripts/gen-icons.mjs && tauri icon src-tauri/icons/source.png",
+    "postinstall": "node scripts/patch-taro-webpackbar.mjs"
+  },
+  "dependencies": {
+    "@babel/runtime": "7.29.7",
+    "@tarojs/components": "4.2.0",
+    "@tarojs/helper": "4.2.0",
+    "@tarojs/plugin-framework-react": "4.2.0",
+    "@tarojs/react": "4.2.0",
+    "@tarojs/runtime": "4.2.0",
+    "@tarojs/shared": "4.2.0",
+    "@tarojs/taro": "4.2.0",
+    "@tarojs/taro-h5": "4.2.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1"
+  },
+  "devDependencies": {
+    "@babel/core": "7.29.7",
+    "@babel/preset-env": "7.29.7",
+    "@babel/preset-react": "7.29.7",
+    "@babel/preset-typescript": "7.29.7",
+    "@pmmmwh/react-refresh-webpack-plugin": "0.6.2",
+    "@tarojs/cli": "4.2.0",
+    "@tarojs/plugin-platform-h5": "4.2.0",
+    "@tarojs/plugin-platform-weapp": "4.2.0",
+    "@tarojs/webpack5-runner": "4.2.0",
+    "@tauri-apps/cli": "2.11.2",
+    "@types/babel__core": "7.20.5",
+    "@types/node": "25.9.2",
+    "@types/react": "18.3.31",
+    "@types/react-dom": "18.3.7",
+    "@types/webpack-env": "1.18.8",
+    "autoprefixer": "10.5.0",
+    "babel-loader": "10.1.1",
+    "babel-plugin-transform-taroapi": "4.2.0",
+    "babel-preset-taro": "4.2.0",
+    "css-loader": "7.1.4",
+    "html-webpack-plugin": "5.6.7",
+    "mini-css-extract-plugin": "2.10.2",
+    "postcss": "8.5.15",
+    "postcss-loader": "8.2.1",
+    "postcss-pxtransform": "4.2.0",
+    "react-refresh": "0.18.0",
+    "sass": "1.100.0",
+    "sass-loader": "17.0.0",
+    "style-loader": "4.0.0",
+    "typescript": "6.0.3",
+    "webpack": "5.107.2"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@swc/core",
+      "@tarojs/binding",
+      "@tarojs/cli",
+      "core-js",
+      "core-js-pure",
+      "esbuild"
+    ]
+  }
+}

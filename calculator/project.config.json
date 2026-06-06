@@ -1,0 +1,24 @@
+{
+  "appid": "touristappid",
+  "projectname": "calculator",
+  "setting": {
+    "urlCheck": true,
+    "es6": false,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true,
+    "autoAudits": false,
+    "showShadowRootInWxmlPanel": true,
+    "scopeDataCheck": false,
+    "uglifyFileName": false,
+    "checkInvalidKey": true,
+    "checkSiteMap": true,
+    "uploadWithSourceMap": true,
+    "compileHotReLoad": false
+  },
+  "compileType": "miniprogram",
+  "libVersion": "3.5.0",
+  "condition": {},
+  "editorSetting": { "tabIndent": "insertSpaces", "tabSize": 2 }
+}
