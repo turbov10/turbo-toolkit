@@ -154,7 +154,7 @@ const MAP2_RAW: string[] = createRawLevel({
     { x: 70, y: 17, tiles: '????' },       // question block reward
     { x: 85, y: 12, tiles: '##########' }, // high hard platform
     { x: 110, y: 17, tiles: 'BBBBBB' },    // brick step after gap 3
-    { x: 130, y: 15, tiles: '########' },  // mid-air platform
+    { x: 125, y: 15, tiles: '##########' }, // mid-air platform (reachable from bricks and ground)
     { x: 160, y: 17, tiles: '????' },      // question blocks
     { x: 180, y: 13, tiles: '########' },  // final high platform
   ],

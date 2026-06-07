@@ -15,22 +15,24 @@ import {
   LEVEL_INTRO_DURATION_MS,
   PLAYER_DEAD_DURATION_MS,
 } from './constants';
-import { aabbOverlap } from './collision';
 import {
-  applyGravity,
-  applyInputToPlayer,
-  movePlayerWithCollision,
+  checkFallDeath,
+  checkPlayerEnemyCollision,
+  checkPlayerGoalCollision,
+} from './collision';
+import {
   updateCamera,
   updateEnemies,
+  updatePlayer,
 } from './physics';
 
 // ---------------------------------------------------------------------------
 // Audio helper
 // ---------------------------------------------------------------------------
 
+/** Emit a terminal bell (BEL) if audio is enabled. No-op otherwise. */
 function beep(audio: boolean): void {
   if (!audio) return;
-  // \x07 is BEL. It is inaudible in most modern terminals but harmless.
   process.stdout.write('\x07');
 }
 
@@ -38,6 +40,7 @@ function beep(audio: boolean): void {
 // Construction
 // ---------------------------------------------------------------------------
 
+/** Build a fresh Player at the level's spawn point, with zero velocity. */
 function makePlayer(level: Level): Player {
   return {
     x: level.playerStart.x,
@@ -51,6 +54,7 @@ function makePlayer(level: Level): Player {
   };
 }
 
+/** Build a fresh array of Enemies from the level's spawn markers. */
 function makeEnemies(level: Level, levelIndex: number): Enemy[] {
   return level.enemyStarts.map((e, i) => ({
     id: `enemy-${levelIndex}-${i}`,
@@ -64,6 +68,7 @@ function makeEnemies(level: Level, levelIndex: number): Enemy[] {
   }));
 }
 
+/** Build the initial GameState at the title screen, World 1, full lives. */
 export function resetGame(): GameState {
   const level = getLevel(0);
   return {
@@ -81,7 +86,7 @@ export function resetGame(): GameState {
   };
 }
 
-/** Reset the player / enemies / camera to the start of the current level. */
+/** Reset player / enemies / camera to the start of the current level. */
 export function resetCurrentLevel(state: GameState): GameState {
   const level = getLevel(state.levelIndex);
   return {
@@ -93,6 +98,7 @@ export function resetCurrentLevel(state: GameState): GameState {
   };
 }
 
+/** Advance to the next world, or transition to GAME_WIN if this was the last. */
 function goToNextLevel(state: GameState, now: number): GameState {
   const nextIndex = state.levelIndex + 1;
   if (nextIndex >= WORLD_COUNT) {
@@ -117,6 +123,7 @@ function goToNextLevel(state: GameState, now: number): GameState {
 // Per-state transitions
 // ---------------------------------------------------------------------------
 
+/** Title screen: Enter starts the game. */
 function handleStartScreen(state: GameState, input: InputState, now: number): GameState {
   if (input.enterPressed) {
     const base: GameState = {
@@ -129,6 +136,7 @@ function handleStartScreen(state: GameState, input: InputState, now: number): Ga
   return state;
 }
 
+/** Auto-advance after the intro timer. */
 function handleLevelIntro(state: GameState, now: number): GameState {
   if (now - state.statusStartTime >= LEVEL_INTRO_DURATION_MS) {
     return { ...state, status: 'PLAYING', statusStartTime: now };
@@ -136,46 +144,44 @@ function handleLevelIntro(state: GameState, now: number): GameState {
   return state;
 }
 
+/** The main game loop tick: input → physics → collisions → state changes. */
 function handlePlaying(state: GameState, input: InputState, now: number): GameState {
   if (input.pausePressed) {
     return { ...state, status: 'PAUSED', statusStartTime: now };
   }
 
-  // Step the simulation.
+  // --- Step the simulation ---
   const player = { ...state.player };
   const enemies = state.enemies.map((e) => ({ ...e }));
   const camera = { ...state.camera };
   const level = state.level;
 
+  // Beep on a successful jump (input was consumed and the player was on
+  // the ground when the jump was applied).
   const wasOnGround = player.onGround;
-  applyInputToPlayer(player, input.left, input.right, input.jumpPressed);
-  if (input.jumpPressed && wasOnGround) {
-    beep(state.audio);
-  }
-  applyGravity(player);
-  movePlayerWithCollision(player, level);
+  updatePlayer(player, level, input.left, input.right, input.jumpPressed);
+  if (input.jumpPressed && wasOnGround) beep(state.audio);
+
   updateEnemies(enemies, level);
   updateCamera(camera, player, level);
 
-  // Player vs enemies.
-  for (const enemy of enemies) {
-    if (aabbOverlap(player, enemy)) {
-      beep(state.audio);
-      return {
-        ...state,
-        status: 'PLAYER_DEAD',
-        lives: state.lives - 1,
-        deaths: state.deaths + 1,
-        statusStartTime: now,
-        player,
-        enemies,
-        camera,
-      };
-    }
+  // --- Death / clear checks (order matters: enemy before goal before fall) ---
+
+  if (checkPlayerEnemyCollision(player, enemies)) {
+    beep(state.audio);
+    return {
+      ...state,
+      status: 'PLAYER_DEAD',
+      lives: state.lives - 1,
+      deaths: state.deaths + 1,
+      statusStartTime: now,
+      player,
+      enemies,
+      camera,
+    };
   }
 
-  // Player reached the goal.
-  if (aabbOverlap(player, { x: level.goal.x, y: level.goal.y, width: 1, height: 1 })) {
+  if (checkPlayerGoalCollision(player, level.goal)) {
     beep(state.audio);
     return {
       ...state,
@@ -187,8 +193,7 @@ function handlePlaying(state: GameState, input: InputState, now: number): GameSt
     };
   }
 
-  // Player fell out of the world.
-  if (player.y >= level.height) {
+  if (checkFallDeath(player, level)) {
     beep(state.audio);
     return {
       ...state,
@@ -205,6 +210,7 @@ function handlePlaying(state: GameState, input: InputState, now: number): GameSt
   return { ...state, player, enemies, camera };
 }
 
+/** Paused: P/Enter resume, M toggles audio. */
 function handlePaused(state: GameState, input: InputState, now: number): GameState {
   if (input.pausePressed || input.enterPressed) {
     return { ...state, status: 'PLAYING', statusStartTime: now };
@@ -216,6 +222,7 @@ function handlePaused(state: GameState, input: InputState, now: number): GameSta
   return state;
 }
 
+/** World clear: auto-advance after the timer, or skip on Enter. */
 function handleLevelClear(state: GameState, input: InputState, now: number): GameState {
   const elapsed = now - state.statusStartTime;
   if (input.skipPressed || input.enterPressed || elapsed >= LEVEL_CLEAR_DURATION_MS) {
@@ -224,23 +231,25 @@ function handleLevelClear(state: GameState, input: InputState, now: number): Gam
   return state;
 }
 
+/** Player death: respawn with intro, or transition to GAME_OVER if out of lives. */
 function handlePlayerDead(state: GameState, input: InputState, now: number): GameState {
   const elapsed = now - state.statusStartTime;
   if (input.skipPressed || input.enterPressed || elapsed >= PLAYER_DEAD_DURATION_MS) {
     if (state.lives <= 0) {
       return { ...state, status: 'GAME_OVER', statusStartTime: now };
     }
-    // Restart the current level and show the intro again.
     return resetCurrentLevel({ ...state, status: 'LEVEL_INTRO', statusStartTime: now });
   }
   return state;
 }
 
+/** Game over: R restarts the whole game. */
 function handleGameOver(state: GameState, input: InputState): GameState {
   if (input.restartPressed) return resetGame();
   return state;
 }
 
+/** Game win: R restarts the whole game. */
 function handleGameWin(state: GameState, input: InputState): GameState {
   if (input.restartPressed) return resetGame();
   return state;
@@ -250,6 +259,7 @@ function handleGameWin(state: GameState, input: InputState): GameState {
 // Public entry point
 // ---------------------------------------------------------------------------
 
+/** One tick of the state machine. Pure: (state, input, now) -> state. */
 export function updateGameState(state: GameState, input: InputState, now: number): GameState {
   switch (state.status) {
     case 'START_SCREEN':

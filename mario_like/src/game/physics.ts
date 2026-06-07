@@ -1,8 +1,11 @@
 // Physics: per-frame updates for the player, enemies, and the camera.
 // Designed to be called once per game tick from `gameState.updateGameState`.
+//
+// All collision resolution lives in `collision.ts`; this module just composes
+// the high-level steps.
 
 import type { Camera, Enemy, Level, Player } from './types';
-import { collidesWithSolid, isSolidAt } from './collision';
+import { collidesWithSolid, isSolidAt, moveWithCollision } from './collision';
 import {
   ENEMY_SPEED,
   GRAVITY,
@@ -12,17 +15,21 @@ import {
   VIEW_WIDTH,
 } from './constants';
 
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Player
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
-/** Translate the held/pressed input into velocities. */
+/**
+ * Translate the held/pressed input into velocities. Pure velocity update —
+ * no movement is applied here. Called once per frame from `updatePlayer`.
+ */
 export function applyInputToPlayer(
   player: Player,
   left: boolean,
   right: boolean,
   jumpPressed: boolean,
 ): void {
+  // Horizontal: if exactly one direction is held, walk that way; otherwise stop.
   if (left && !right) {
     player.vx = -MOVE_SPEED;
     player.facing = 'left';
@@ -40,6 +47,7 @@ export function applyInputToPlayer(
   }
 }
 
+/** Apply gravity acceleration and clamp to terminal velocity. */
 export function applyGravity(player: Player): void {
   player.vy += GRAVITY;
   if (player.vy > MAX_FALL_SPEED) {
@@ -47,82 +55,58 @@ export function applyGravity(player: Player): void {
   }
 }
 
-/**
- * Move the player by their current velocity, axis-by-axis, snapping to the
- * edge of any solid tile we hit. This guarantees the player can never end a
- * frame inside a wall.
- */
+/** Move the player with collision resolution. Thin wrapper for symmetry. */
 export function movePlayerWithCollision(player: Player, level: Level): void {
-  // --- Horizontal ---
-  if (player.vx !== 0) {
-    let newX = player.x + player.vx;
-
-    // Hard clamp to the level bounds so the player can't walk off either end.
-    if (newX < 0) newX = 0;
-    if (newX + player.width > level.width) newX = level.width - player.width;
-
-    if (collidesWithSolid(newX, player.y, player.width, player.height, level)) {
-      // Snap to the edge of the colliding tile.
-      if (player.vx > 0) {
-        // Moving right: align our right edge to the colliding tile's left edge.
-        const rightEdge = player.x + player.width;
-        player.x = Math.floor(rightEdge + player.vx) - player.width;
-      } else {
-        // Moving left: align our left edge to the colliding tile's right edge.
-        player.x = Math.floor(newX) + 1;
-      }
-      player.vx = 0;
-    } else {
-      player.x = newX;
-    }
-  }
-
-  // --- Vertical ---
-  if (player.vy !== 0) {
-    const newY = player.y + player.vy;
-
-    if (collidesWithSolid(player.x, newY, player.width, player.height, level)) {
-      if (player.vy > 0) {
-        // Falling: snap to the top of the tile we landed on, mark on ground.
-        const bottomEdge = player.y + player.height;
-        player.y = Math.floor(bottomEdge + player.vy) - player.height;
-        player.onGround = true;
-      } else {
-        // Rising: bonk on the underside of the tile.
-        player.y = Math.floor(newY) + 1;
-      }
-      player.vy = 0;
-    } else {
-      player.y = newY;
-      player.onGround = false;
-    }
-  }
+  moveWithCollision(player, level);
 }
 
-// -----------------------------------------------------------------------------
+/**
+ * Top-level per-frame player update. Order matters:
+ *   1. Read input → set vx, possibly trigger jump (sets vy)
+ *   2. Apply gravity to vy
+ *   3. Move with collision (resolves solid overlaps axis-by-axis)
+ */
+export function updatePlayer(
+  player: Player,
+  level: Level,
+  left: boolean,
+  right: boolean,
+  jumpPressed: boolean,
+): void {
+  applyInputToPlayer(player, left, right, jumpPressed);
+  applyGravity(player);
+  movePlayerWithCollision(player, level);
+}
+
+// ---------------------------------------------------------------------------
 // Enemies
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
 /**
  * Step every enemy one frame. Mushrooms walk left/right, turn around at walls,
  * and turn around at platform edges so they don't walk off cliffs.
+ *
+ * Enemies are not moved via `moveWithCollision` because they only ever travel
+ * horizontally (vy is always 0). Instead we do a forward query: would the
+ * enemy collide if placed at `newX`? If yes, turn around; if no, commit the
+ * move. This keeps the wall response snappy and avoids needing to handle
+ * `onGround` on enemies.
  */
 export function updateEnemies(enemies: Enemy[], level: Level): void {
   for (const enemy of enemies) {
     const newX = enemy.x + enemy.vx;
 
-    // 1) Wall in front?
-    if (
-      collidesWithSolid(newX, enemy.y, enemy.width, enemy.height, level)
-    ) {
+    // 1) Wall in front? Query only — do not move yet.
+    if (collidesWithSolid(newX, enemy.y, enemy.width, enemy.height, level)) {
       enemy.direction = (enemy.direction * -1) as -1 | 1;
       enemy.vx = ENEMY_SPEED * enemy.direction;
       continue;
     }
 
     // 2) Platform edge in front? Check the tile directly under the front foot.
-    const frontX =
-      enemy.direction > 0 ? enemy.x + enemy.width : enemy.x;
+    //    If there's no ground there, the enemy would walk off a cliff, so we
+    //    turn around before stepping.
+    const frontX = enemy.direction > 0 ? enemy.x + enemy.width : enemy.x;
     const belowY = enemy.y + enemy.height;
     if (!isSolidAt(level, Math.floor(frontX), Math.floor(belowY))) {
       enemy.direction = (enemy.direction * -1) as -1 | 1;
@@ -135,9 +119,9 @@ export function updateEnemies(enemies: Enemy[], level: Level): void {
   }
 }
 
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 // Camera
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
 
 /**
  * Keep the player roughly centered horizontally, clamped so the camera never

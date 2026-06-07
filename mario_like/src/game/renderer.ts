@@ -15,6 +15,15 @@ export type ColorFrame = ColorLine[];
 
 type Cell = { ch: string; color?: string };
 
+/** Collapse a ColorFrame into plain `string[]` (one string per row).
+ *  Useful for callers that want a spec-compliant plain-text frame
+ *  (e.g. for logging, tests, or a non-Ink renderer). */
+export function frameToLines(frame: ColorFrame): string[] {
+  return frame.map((line) =>
+    line.map((span) => span.text).join(''),
+  );
+}
+
 const DEFAULT_TILE_COLOR: Record<string, string | undefined> = {
   '#': 'gray',
   'B': 'yellow',
@@ -141,4 +150,10 @@ export function renderFrame(state: GameState): ColorFrame {
   }
   if (lines.length > VIEW_HEIGHT) lines.length = VIEW_HEIGHT;
   return lines;
+}
+
+/** Spec-compliant convenience: render a frame and return it as plain
+ *  `string[]` (one string per row, no color information). */
+export function renderFrameLines(state: GameState): string[] {
+  return frameToLines(renderFrame(state));
 }
