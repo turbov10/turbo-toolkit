@@ -40,21 +40,23 @@ function beep(audio: boolean): void {
 // Construction
 // ---------------------------------------------------------------------------
 
-/** Build a fresh Player at the level's spawn point, with zero velocity. */
+/** Build a fresh Player at the level's spawn point, with zero velocity.
+ *  The player is a 2x2 tile sprite. */
 function makePlayer(level: Level): Player {
   return {
     x: level.playerStart.x,
     y: level.playerStart.y,
     vx: 0,
     vy: 0,
-    width: 1,
-    height: 1,
+    width: 2,
+    height: 2,
     facing: 'right',
     onGround: false,
   };
 }
 
-/** Build a fresh array of Enemies from the level's spawn markers. */
+/** Build a fresh array of Enemies from the level's spawn markers.
+ *  Mushroom enemies are also 2x2 tile sprites. */
 function makeEnemies(level: Level, levelIndex: number): Enemy[] {
   return level.enemyStarts.map((e, i) => ({
     id: `enemy-${levelIndex}-${i}`,
@@ -63,8 +65,8 @@ function makeEnemies(level: Level, levelIndex: number): Enemy[] {
     y: e.y,
     vx: ENEMY_SPEED,
     direction: -1,
-    width: 1,
-    height: 1,
+    width: 2,
+    height: 2,
   }));
 }
 

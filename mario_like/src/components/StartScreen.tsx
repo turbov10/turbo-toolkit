@@ -5,33 +5,35 @@ import { TITLE_LOGO } from '../ascii-art';
 // A small mini-scene shown on the start screen as a visual preview of
 // the in-game rendering. Uses the same character set and color scheme as
 // the renderer so the player recognizes what they're about to play.
+// Mirrors the new look: 2x2 player, 2x2 enemy, 5-row brown ground, 2-row
+// platforms, figlet-derived clouds.
 function MiniScene(): React.ReactElement {
   return (
     <Box flexDirection="column" alignItems="center">
       <Text>
-        <Text color="cyan">~</Text>
-        <Text>{'        '}</Text>
-        <Text color="cyan">~</Text>
-        <Text>{'              '}</Text>
-        <Text color="cyan">~</Text>
-      </Text>
-      <Text>
-        <Text>{'        '}</Text>
-        <Text color="green">????</Text>
+        <Text color="cyan">~~~</Text>
+        <Text>{'    '}</Text>
+        <Text color="cyan">~~~~~</Text>
         <Text>{'       '}</Text>
-        <Text color="yellow">B</Text>
-        <Text>{'           '}</Text>
-        <Text color="yellow">o</Text>
+        <Text color="cyan">~~~</Text>
       </Text>
       <Text>
-        <Text color="gray">####</Text>
-        <Text>{'    '}</Text>
-        <Text color="cyanBright">@</Text>
         <Text>{'  '}</Text>
-        <Text color="redBright">g</Text>
-        <Text>{'    '}</Text>
-        <Text color="gray">######</Text>
-        <Text>{'    '}</Text>
+        <Text color="green">??????</Text>
+        <Text>{'     '}</Text>
+        <Text color="yellow">BB</Text>
+        <Text>{'         '}</Text>
+        <Text color="yellowBright">o</Text>
+      </Text>
+      <Text>
+        <Text color="#8B4513">#####</Text>
+        <Text>{'  '}</Text>
+        <Text color="cyanBright">@@</Text>
+        <Text>{'  '}</Text>
+        <Text color="redBright">gg</Text>
+        <Text>{'  '}</Text>
+        <Text color="#8B4513">#######</Text>
+        <Text>{'  '}</Text>
         <Text color="greenBright">F</Text>
       </Text>
     </Box>

@@ -3,8 +3,8 @@
 // per row). `parseLevel` then strips 'P' / 'G' markers into metadata.
 //
 // The procedural config is just a more readable way to author the same
-// `string[]` the spec asks for. If you prefer to edit raw grids, every map
-// is also exported as a finished `string[]` (see the `RAW_MAPS` export).
+// `string[]` the spec asks for. If you prefer to edit raw grids, every
+// map is also exported as a finished `string[]` (see the `RAW_MAPS` export).
 //
 // Tile characters used in the source:
 //   .  air (rendered as space)
@@ -15,16 +15,18 @@
 //   G  enemy spawn  (removed from the static grid, kept in metadata)
 //   F  goal flag    (kept in the static grid)
 //   o  decorative coin (no collision, no collection)
-//   ~  background cloud (no collision)
+//   ~  background cloud (no collision; shape comes from figlet mask)
 //
-// All maps are 22 rows tall. The ground lives on row 21 (the last row).
-// The visible game area is 22 rows (HUD is drawn separately on top).
+// All maps are 22 rows tall. The ground occupies the bottom 5 rows
+// (y=17..21) and the renderer colors it brown. Player is 2x2 and stands
+// at y=15 (bottom at y=17). Floating platforms are 2 rows thick.
 
+import { CLOUD_TILES } from '../ascii-art';
 import type { Level, Tile } from './types';
 
 type Gap = { start: number; end: number };
 type Platform = { x: number; y: number; tiles: string };
-type Cloud = { x: number; y: number; width: number };
+type Cloud = { x: number; y: number };
 type Coin = { x: number; y: number };
 type EnemyPos = { x: number; y: number };
 
@@ -41,6 +43,12 @@ type LevelConfig = {
   goal: { x: number; y: number };
 };
 
+/** How many rows of ground the renderer should color brown. */
+export const GROUND_THICKNESS = 5;
+
+/** Every elevated platform is this many rows thick. */
+export const PLATFORM_THICKNESS = 2;
+
 function createRawLevel(config: LevelConfig): string[] {
   const { width, height, groundY, groundGaps, platforms, clouds, coins, playerStart, enemies, goal } = config;
 
@@ -50,27 +58,38 @@ function createRawLevel(config: LevelConfig): string[] {
     grid.push(new Array<string>(width).fill('.'));
   }
 
-  // Ground row, with gaps.
-  for (let x = 0; x < width; x++) {
-    const inGap = groundGaps.some((g) => x >= g.start && x < g.end);
-    grid[groundY][x] = inGap ? '.' : '#';
+  // Ground: GROUND_THICKNESS rows thick, with gaps.
+  for (let dy = 0; dy < GROUND_THICKNESS; dy++) {
+    const y = groundY - dy;
+    if (y < 0) break;
+    for (let x = 0; x < width; x++) {
+      const inGap = groundGaps.some((g) => x >= g.start && x < g.end);
+      grid[y][x] = inGap ? '.' : '#';
+    }
   }
 
-  // Elevated platforms (bricks, question blocks, hard platforms).
+  // Elevated platforms: PLATFORM_THICKNESS rows thick.
   for (const p of platforms) {
-    for (let i = 0; i < p.tiles.length; i++) {
-      const x = p.x + i;
-      if (x >= 0 && x < width) {
-        grid[p.y][x] = p.tiles[i];
+    for (let dy = 0; dy < PLATFORM_THICKNESS; dy++) {
+      const y = p.y + dy;
+      if (y < 0 || y >= height) continue;
+      for (let i = 0; i < p.tiles.length; i++) {
+        const x = p.x + i;
+        if (x >= 0 && x < width) {
+          grid[y][x] = p.tiles[i];
+        }
       }
     }
   }
 
-  // Decorative clouds in the sky.
+  // Decorative clouds: stamp the figlet-generated mask at each cloud
+  // origin. Each `~` is rendered in cyan.
   for (const c of clouds) {
-    for (let x = c.x; x < c.x + c.width; x++) {
-      if (x >= 0 && x < width && c.y >= 0 && c.y < height) {
-        grid[c.y][x] = '~';
+    for (const tile of CLOUD_TILES) {
+      const x = c.x + tile.dx;
+      const y = c.y + tile.dy;
+      if (x >= 0 && x < width && y >= 0 && y < height) {
+        grid[y][x] = '~';
       }
     }
   }
@@ -82,10 +101,10 @@ function createRawLevel(config: LevelConfig): string[] {
     }
   }
 
-  // Player spawn.
+  // Player spawn (2x2).
   grid[playerStart.y][playerStart.x] = 'P';
 
-  // Enemy spawns.
+  // Enemy spawns (2x2).
   for (const e of enemies) {
     grid[e.y][e.x] = 'G';
   }
@@ -97,10 +116,11 @@ function createRawLevel(config: LevelConfig): string[] {
 }
 
 // -----------------------------------------------------------------------------
-// World 1 — tutorial. 160 tiles wide, 2 small gaps, 2 mushrooms, easy jumps.
+// World 1 — tutorial. 160 tiles wide, 2 small gaps, 2 mushrooms.
 //   gap 1: 4 tiles at x=30..33
 //   gap 2: 5 tiles at x=80..84
 //   question blocks above gap 1, brick step above gap 2, high platform bridge
+// Player (2x2) stands at y=15, bottom at y=17 (ground top).
 // -----------------------------------------------------------------------------
 const MAP1_RAW: string[] = createRawLevel({
   width: 160,
@@ -111,28 +131,28 @@ const MAP1_RAW: string[] = createRawLevel({
     { start: 80, end: 85 },
   ],
   platforms: [
-    { x: 44, y: 17, tiles: '?????' },      // question blocks over the first gap
-    { x: 92, y: 15, tiles: 'BBBBB' },      // brick step over the second gap
-    { x: 105, y: 13, tiles: '######' },    // high platform reachable from the bricks
+    { x: 44, y: 13, tiles: '?????' },      // question blocks over the first gap (y=13-14)
+    { x: 92, y: 11, tiles: 'BBBBB' },      // brick step over the second gap (y=11-12)
+    { x: 105, y: 9, tiles: '######' },     // high platform reachable from the bricks (y=9-10)
   ],
   clouds: [
-    { x: 10, y: 1, width: 3 },
-    { x: 40, y: 2, width: 3 },
-    { x: 75, y: 1, width: 3 },
-    { x: 110, y: 2, width: 3 },
-    { x: 135, y: 1, width: 3 },
+    { x: 10, y: 0 },
+    { x: 40, y: 1 },
+    { x: 75, y: 0 },
+    { x: 110, y: 1 },
+    { x: 145, y: 0 },
   ],
   coins: [
-    { x: 48, y: 14 },
-    { x: 108, y: 10 },
-    { x: 140, y: 17 },
+    { x: 48, y: 10 },
+    { x: 108, y: 6 },
+    { x: 140, y: 13 },
   ],
-  playerStart: { x: 5, y: 20 },
+  playerStart: { x: 5, y: 15 },
   enemies: [
-    { x: 60, y: 20 },
-    { x: 130, y: 20 },
+    { x: 60, y: 15 },
+    { x: 130, y: 15 },
   ],
-  goal: { x: 152, y: 20 },
+  goal: { x: 152, y: 15 },
 });
 
 // -----------------------------------------------------------------------------
@@ -143,46 +163,46 @@ const MAP2_RAW: string[] = createRawLevel({
   height: 22,
   groundY: 21,
   groundGaps: [
-    { start: 25, end: 29 },   // 4-tile gap
-    { start: 60, end: 65 },   // 5-tile gap
-    { start: 100, end: 106 }, // 6-tile gap
-    { start: 150, end: 155 }, // 5-tile gap
+    { start: 25, end: 29 },   // gap 1
+    { start: 60, end: 65 },   // gap 2
+    { start: 100, end: 106 }, // gap 3
+    { start: 150, end: 155 }, // gap 4
   ],
   platforms: [
-    { x: 35, y: 17, tiles: 'BBBBBB' },     // brick step after gap 1
-    { x: 50, y: 14, tiles: '########' },   // mid-air platform
-    { x: 70, y: 17, tiles: '????' },       // question block reward
-    { x: 85, y: 12, tiles: '##########' }, // high hard platform
-    { x: 110, y: 17, tiles: 'BBBBBB' },    // brick step after gap 3
-    { x: 125, y: 15, tiles: '##########' }, // mid-air platform (reachable from bricks and ground)
-    { x: 160, y: 17, tiles: '????' },      // question blocks
-    { x: 180, y: 13, tiles: '########' },  // final high platform
+    { x: 35, y: 13, tiles: 'BBBBBB' },     // brick step after gap 1
+    { x: 50, y: 10, tiles: '########' },   // mid-air platform
+    { x: 70, y: 13, tiles: '????' },       // question blocks
+    { x: 85, y: 8, tiles: '##########' },  // high hard platform
+    { x: 110, y: 13, tiles: 'BBBBBB' },    // brick step after gap 3
+    { x: 125, y: 11, tiles: '##########' }, // mid-air platform (reachable from bricks and ground)
+    { x: 160, y: 13, tiles: '????' },      // question blocks
+    { x: 180, y: 9, tiles: '########' },   // final high platform
   ],
   clouds: [
-    { x: 8, y: 1, width: 3 },
-    { x: 30, y: 2, width: 3 },
-    { x: 55, y: 1, width: 3 },
-    { x: 80, y: 2, width: 3 },
-    { x: 115, y: 1, width: 3 },
-    { x: 140, y: 2, width: 3 },
-    { x: 170, y: 1, width: 3 },
-    { x: 200, y: 2, width: 3 },
+    { x: 8, y: 0 },
+    { x: 30, y: 1 },
+    { x: 55, y: 0 },
+    { x: 80, y: 1 },
+    { x: 115, y: 0 },
+    { x: 140, y: 1 },
+    { x: 170, y: 0 },
+    { x: 200, y: 1 },
   ],
   coins: [
-    { x: 38, y: 14 },
-    { x: 55, y: 11 },
-    { x: 90, y: 9 },
-    { x: 115, y: 14 },
-    { x: 165, y: 14 },
+    { x: 38, y: 10 },
+    { x: 55, y: 7 },
+    { x: 90, y: 5 },
+    { x: 115, y: 10 },
+    { x: 165, y: 10 },
   ],
-  playerStart: { x: 5, y: 20 },
+  playerStart: { x: 5, y: 15 },
   enemies: [
-    { x: 45, y: 20 },
-    { x: 90, y: 20 },
-    { x: 140, y: 20 },
-    { x: 195, y: 20 },
+    { x: 45, y: 15 },
+    { x: 90, y: 15 },
+    { x: 140, y: 15 },
+    { x: 195, y: 15 },
   ],
-  goal: { x: 215, y: 20 },
+  goal: { x: 215, y: 15 },
 });
 
 // -----------------------------------------------------------------------------
@@ -245,6 +265,7 @@ export function parseLevel(rawTiles: string[]): Level {
     playerStart,
     enemyStarts,
     goal,
+    groundTop: height - GROUND_THICKNESS,
   };
 }
 

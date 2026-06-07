@@ -24,8 +24,10 @@ export function frameToLines(frame: ColorFrame): string[] {
   );
 }
 
+// Default per-tile colors. Ground ('#' at y >= groundTop) is overridden
+// to brown in `tileColor()` below.
 const DEFAULT_TILE_COLOR: Record<string, string | undefined> = {
-  '#': 'gray',
+  '#': 'gray',          // floating platforms (ground overrides to brown)
   'B': 'yellow',
   '?': 'green',
   'o': 'yellowBright',
@@ -33,8 +35,20 @@ const DEFAULT_TILE_COLOR: Record<string, string | undefined> = {
   'F': 'greenBright',
 };
 
+/** Brown for the 5-row ground. Saddle brown is a dark, earthy color that
+ *  reads as "dirt" in a terminal and contrasts well with the cyan player
+ *  and yellow coins. */
+const GROUND_COLOR = '#8B4513';
+
 const PLAYER_COLOR = 'cyanBright';
 const ENEMY_COLOR = 'redBright';
+
+/** Per-tile color, with the special case that '#' at or below the ground
+ *  top is drawn brown instead of gray. */
+function tileColor(tile: string, mapY: number, groundTop: number): string | undefined {
+  if (tile === '#' && mapY >= groundTop) return GROUND_COLOR;
+  return DEFAULT_TILE_COLOR[tile];
+}
 
 // ---------------------------------------------------------------------------
 // HUD
@@ -74,6 +88,31 @@ function buildHintLine(state: GameState): ColorLine {
 // Frame assembly
 // ---------------------------------------------------------------------------
 
+/** Paint a 2x2 sprite (player or enemy) into the buffer. The sprite char
+ *  and color are the same for all four cells. Cells outside the viewport
+ *  are clipped. */
+function paintSprite(
+  buffer: Cell[][],
+  originX: number,
+  originY: number,
+  sizeX: number,
+  sizeY: number,
+  camX: number,
+  camY: number,
+  ch: string,
+  color: string,
+): void {
+  for (let dy = 0; dy < sizeY; dy++) {
+    for (let dx = 0; dx < sizeX; dx++) {
+      const sx = Math.floor(originX) - camX + dx;
+      const sy = Math.floor(originY) - camY + dy;
+      if (sx >= 0 && sx < VIEW_WIDTH && sy >= 0 && sy < GAME_VIEW_HEIGHT) {
+        buffer[sy][sx] = { ch, color };
+      }
+    }
+  }
+}
+
 function buildBuffer(state: GameState): Cell[][] {
   const buffer: Cell[][] = [];
   for (let y = 0; y < GAME_VIEW_HEIGHT; y++) {
@@ -82,6 +121,7 @@ function buildBuffer(state: GameState): Cell[][] {
 
   const camX = Math.floor(state.camera.x);
   const camY = Math.floor(state.camera.y);
+  const groundTop = state.level.groundTop;
 
   // Map tiles.
   for (let y = 0; y < GAME_VIEW_HEIGHT; y++) {
@@ -93,25 +133,20 @@ function buildBuffer(state: GameState): Cell[][] {
       const mapX = camX + x;
       if (mapX < 0 || mapX >= state.level.width) continue;
       const tile = row[mapX];
-      buffer[y][x] = { ch: tile === '.' ? ' ' : tile, color: DEFAULT_TILE_COLOR[tile] };
+      buffer[y][x] = {
+        ch: tile === '.' ? ' ' : tile,
+        color: tileColor(tile, mapY, groundTop),
+      };
     }
   }
 
-  // Enemies.
+  // Enemies — 2x2 sprite.
   for (const enemy of state.enemies) {
-    const sx = Math.floor(enemy.x) - camX;
-    const sy = Math.floor(enemy.y) - camY;
-    if (sx >= 0 && sx < VIEW_WIDTH && sy >= 0 && sy < GAME_VIEW_HEIGHT) {
-      buffer[sy][sx] = { ch: 'g', color: ENEMY_COLOR };
-    }
+    paintSprite(buffer, enemy.x, enemy.y, enemy.width, enemy.height, camX, camY, 'g', ENEMY_COLOR);
   }
 
-  // Player.
-  const psx = Math.floor(state.player.x) - camX;
-  const psy = Math.floor(state.player.y) - camY;
-  if (psx >= 0 && psx < VIEW_WIDTH && psy >= 0 && psy < GAME_VIEW_HEIGHT) {
-    buffer[psy][psx] = { ch: '@', color: PLAYER_COLOR };
-  }
+  // Player — 2x2 sprite.
+  paintSprite(buffer, state.player.x, state.player.y, state.player.width, state.player.height, camX, camY, '@', PLAYER_COLOR);
 
   return buffer;
 }
