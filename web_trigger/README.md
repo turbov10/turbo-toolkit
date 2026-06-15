@@ -100,7 +100,7 @@ python web_trigger.py -c config.yaml
 3. 找到并点击
 4. 验证成功条件
 5. 执行后续流程（截图、填表、通知等）
-6. 达到 `max_triggers` 后退出
+6. 达到 `max_try` 后退出
 
 ### 5️⃣ 可视化调试
 
@@ -134,8 +134,8 @@ schedule:
   timezone: "Asia/Shanghai"      # 时区（Python zoneinfo 支持的任意时区）
   poll_interval_ms: 300           # 轮询间隔（毫秒）
   jitter_ms: 150                  # 随机抖动（毫秒），在每次轮询间增加随机延迟
-  max_triggers: 1                 # 每次窗口内最大触发次数
-  exit_after_success: true        # 达到 max_triggers 后退出程序
+  max_try: 1                      # 每次窗口内最大触发次数
+  exit_after_success: true        # 达到 max_try 后退出程序
   reload_each_poll: false         # 每次轮询前是否刷新页面
   windows:                        # 触发窗口列表（可同时配置多个）
 ```
@@ -297,7 +297,7 @@ schedule:
   windows:
     - cron: "0 8 * * *"
       duration_seconds: 300
-  max_triggers: 1
+  max_try: 1
 trigger:
   selectors:
     - "button.checkin-btn"
@@ -325,7 +325,7 @@ schedule:
   windows:
     - range: "10:00-10:30"
   exit_after_success: false       # 可多次触发
-  max_triggers: 5
+  max_try: 5
 trigger:
   selectors:
     - "button#start"
@@ -377,7 +377,7 @@ on_success:
 │    │   │   │   │   │   └─ 执行 on_success 列表 (screenshot/      │
 │    │   │   │   │   │      fill/click/notify/...)                  │
 │    │   │   │   │   └─ sleep(poll + random jitter)                │
-│    │   │   │   └─ 达到 max_triggers → 返回成功                    │
+│    │   │   │   └─ 达到 max_try → 返回成功                    │
 │    │   │   ├─ exit_after_success? → 退出 / 继续                   │
 │    │   │                                                         │
 │    │   └─ 状态 = idle                                             │

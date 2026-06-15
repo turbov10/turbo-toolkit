@@ -16,4 +16,5 @@ build/
 .idea/
 .vscode/
 
-config.local.yaml
+web_trigger/auth.local.json
+web_trigger/config.local.yaml

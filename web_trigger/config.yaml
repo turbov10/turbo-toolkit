@@ -9,7 +9,7 @@ schedule:
   timezone: "Asia/Shanghai"
   poll_interval_ms: 300    # 轮询间隔
   jitter_ms: 150           # 随机抖动，防检测/防猛打
-  max_triggers: 1          # 每次目标达成上限
+  max_try: 1               # 每次目标达成上限
   exit_after_success: true # 成功后退出
   reload_each_poll: false  # 是否每轮刷新页面
   windows:

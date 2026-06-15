@@ -213,31 +213,30 @@ class Automation:
         s = self.cfg["schedule"]
         poll = s.get("poll_interval_ms", 500) / 1000
         jitter = s.get("jitter_ms", 200) / 1000
-        max_trig = s.get("max_triggers", 1)
-        reload_each = s.get("reload_each_poll", False)
-        triggered = 0
-        while now_tz(tz) < end_time:
+        max_try = s.get("max_try", 0)
+        reload_each_poll = s.get("reload_each_poll", False)
+        tried = 0
+        while now_tz(tz) < end_time and (tried <= max_try or max_try == 0):
+            tried += 1
+            # 成功后不再重复点击，只等待窗口结束或达到 max_try
+            if self.find_and_click(page):
+                time.sleep(self.cfg["trigger"].get("post_click_wait_ms", 800) / 1000)
+                if self.check_success(page):
+                    self.success_count += 1
+                    log.info("✅ 触发成功")
+                    self.run_post_flow(page)
+                    return True
+                else:
+                    log.info("点击成功但未达成功条件，继续重试")
+            time.sleep(poll + random.uniform(0, jitter))
             # 只在未触发过时 reload；成功后保持当前页面状态（结算页等）
-            if reload_each and triggered == 0:
+            if reload_each_poll:
                 try:
                     page.reload(wait_until="domcontentloaded")
                     self._wait_page_ready(page)
                 except Exception:
                     pass
-            # 成功后不再重复点击，只等待窗口结束或达到 max_triggers
-            if triggered == 0 and self.find_and_click(page):
-                time.sleep(self.cfg["trigger"].get("post_click_wait_ms", 800) / 1000)
-                if self.check_success(page):
-                    triggered += 1
-                    self.success_count += 1
-                    log.info("✅ 第 %d 次触发成功", triggered)
-                    self.run_post_flow(page)
-                    if triggered >= max_trig:
-                        return True
-                else:
-                    log.info("点击成功但未达成功条件，继续重试")
-            time.sleep(poll + random.uniform(0, jitter))
-        return triggered > 0
+        return False
 
 
 # ----------------------------- 浏览器与命令 -----------------------------
