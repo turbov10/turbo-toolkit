@@ -1,0 +1,50 @@
+target_url: "http://localhost:8000/test_page.html"
+headless: false          # 调试期建议 false，可见浏览器
+slow_mo_ms: 0
+storage_state: "auth.json"        # 若存在则复用登录态
+save_storage_state: "auth.json"   # 运行结束/login 时回写
+# user_agent: "Mozilla/5.0 ..."   # 可选，拟人化
+
+schedule:
+  timezone: "Asia/Shanghai"
+  poll_interval_ms: 300    # 轮询间隔
+  jitter_ms: 150           # 随机抖动，防检测/防猛打
+  max_triggers: 1          # 每次目标达成上限
+  exit_after_success: true # 成功后退出
+  reload_each_poll: false  # 是否每轮刷新页面
+  windows:
+    # 方式一：cron 精确开窗 + 持续时长
+    - cron: "0 10 * * *"        # 每天 10:00 开窗
+      duration_seconds: 120     # 持续 2 分钟
+    # 方式二：简单时间段（支持跨午夜）
+    - range: "21:00-21:05"
+
+trigger:
+  selectors:                 # 多选择器顺序兜底
+    - "button#buy-now:not([disabled])"
+    - "text=立即购买"
+  wait_state: "visible"      # visible | enabled | attached
+  click_method: "click"      # click | js_click | dispatch
+  post_click_wait_ms: 800
+
+success:                     # 任一命中即视为成功（点击≠成功）
+  any_of:
+    - url_contains: "/order/confirm"
+    - selector_visible: "text=下单成功"
+    - js: "() => window.__ORDER_OK__ === true"
+
+on_success:                  # 声明式后续流程
+  - action: screenshot
+    path: "success_{ts}.png"
+  - action: eval_js
+    script: "() => console.log('post flow start')"
+  # - action: fill
+  #   selector: "#coupon"
+  #   value: "VIP2026"
+  # - action: click
+  #   selector: "#submit-order"
+  # - action: wait_for
+  #   selector: "text=支付"
+  - action: notify
+    message: "🎉 目标已触发并完成后续流程"
+    # webhook: "https://open.feishu.cn/open-apis/bot/v2/hook/xxxx"

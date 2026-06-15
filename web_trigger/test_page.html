@@ -1,0 +1,17 @@
+<!doctype html>
+<html><body>
+  <h1>Trigger Test</h1>
+  <button id="buy-now" disabled>立即购买</button>
+  <div id="result"></div>
+  <script>
+    // 3 秒后启用按钮，模拟"开抢"时刻
+    setTimeout(() => {
+      document.getElementById('buy-now').disabled = false;
+    }, 3000);
+    document.getElementById('buy-now').addEventListener('click', () => {
+      window.__ORDER_OK__ = true;
+      document.getElementById('result').textContent = '下单成功';
+      history.pushState({}, '', '/order/confirm');
+    });
+  </script>
+</body></html>

@@ -1,0 +1,16 @@
+# 浏览器自动化内核（Playwright，含同步 API）
+playwright>=1.44,<2.0
+
+# YAML 配置解析
+PyYAML>=6.0
+
+# cron 时间表达式解析（窗口调度）
+croniter>=2.0
+
+# Webhook 通知（飞书/Slack 等，可选但默认引用）
+requests>=2.31
+
+# 说明：
+# - zoneinfo 为 Python 3.9+ 标准库，无需安装；
+#   如需在 3.8 上运行，可改用： backports.zoneinfo>=0.2.1; python_version < "3.9"
+# - argparse / logging / dataclasses 等均为标准库，无需列出。
