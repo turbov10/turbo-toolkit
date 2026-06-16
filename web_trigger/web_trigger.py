@@ -216,7 +216,7 @@ class Automation:
         max_try = s.get("max_try", 0)
         reload_each_poll = s.get("reload_each_poll", False)
         tried = 0
-        while now_tz(tz) < end_time and (tried <= max_try or max_try == 0):
+        while now_tz(tz) < end_time and (tried < max_try or max_try == 0):
             tried += 1
             # 成功后不再重复点击，只等待窗口结束或达到 max_try
             if self.find_and_click(page):
@@ -229,13 +229,13 @@ class Automation:
                 else:
                     log.info("点击成功但未达成功条件，继续重试")
             time.sleep(poll + random.uniform(0, jitter))
-            # 只在未触发过时 reload；成功后保持当前页面状态（结算页等）
+            # 每次轮询开始前：若启用 reload_each_poll 则重载页面并等待渲染
             if reload_each_poll:
                 try:
                     page.reload(wait_until="domcontentloaded")
                     self._wait_page_ready(page)
-                except Exception:
-                    pass
+                except Exception as exc:
+                    log.debug("reload 失败: %s", exc)
         return False
 
 
@@ -258,6 +258,8 @@ def build_browser(p, cfg):
 
 def cmd_run(cfg, args):
     tz = cfg["schedule"].get("timezone", "Asia/Shanghai")
+    stay_after_success = cfg["schedule"].get("stay_after_success", False)
+    exit_after_success = cfg["schedule"].get("exit_after_success", True)
     auto = Automation(cfg, dry_run=args.dry_run)
     with sync_playwright() as p:
         browser, context, page = build_browser(p, cfg)
@@ -271,9 +273,17 @@ def cmd_run(cfg, args):
                     page.goto(cfg["target_url"], wait_until="domcontentloaded")
                     auto._wait_page_ready(page)
                     done = auto.run_window(page, end, tz)
-                    if done and cfg["schedule"].get("exit_after_success", True):
-                        log.info("已完成目标，退出。")
-                        break
+                    if done:
+                        if stay_after_success:
+                            log.info("✅ 已停留在目标页面（浏览器保持打开），按回车关闭并退出…")
+                            try:
+                                input()
+                            except EOFError:
+                                pass
+                            break
+                        if exit_after_success:
+                            log.info("已完成目标，退出。")
+                            break
                 else:
                     wait_s = max(1, min((start - now_tz(tz)).total_seconds(), 60))
                     log.info("等待下个窗口 %s（约 %.0fs 后复查）",

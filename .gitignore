@@ -18,3 +18,4 @@ build/
 
 web_trigger/auth.local.json
 web_trigger/config.local.yaml
+web_trigger/*.png

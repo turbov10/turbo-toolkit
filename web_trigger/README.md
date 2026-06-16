@@ -95,12 +95,13 @@ python web_trigger.py -c config.yaml
 ```
 
 启动后：
-1. 等待时间窗口开启
-2. 窗口内高频轮询目标元素
-3. 找到并点击
-4. 验证成功条件
-5. 执行后续流程（截图、填表、通知等）
-6. 达到 `max_try` 后退出
+1. 打开浏览器，跳转至 `target_url` 并等待加载
+2. 等待时间窗口开启（按 60s 切片 sleep 并刷新窗口状态）
+3. 窗口内按 `poll_interval_ms` 高频轮询：若启用 `reload_each_poll` 则每次轮询**前**先 `page.reload` 并等待渲染
+4. 找到目标元素并点击
+5. 验证成功条件
+6. 执行后续流程（截图、填表、通知等）
+7. 窗口结束 / 达到 `max_try` / 触发成功 → 若 `stay_after_success=true` 则停留在页面等待回车，否则按 `exit_after_success` 决定退出或继续等下一窗口
 
 ### 5️⃣ 可视化调试
 
@@ -134,9 +135,10 @@ schedule:
   timezone: "Asia/Shanghai"      # 时区（Python zoneinfo 支持的任意时区）
   poll_interval_ms: 300           # 轮询间隔（毫秒）
   jitter_ms: 150                  # 随机抖动（毫秒），在每次轮询间增加随机延迟
-  max_try: 1                      # 每次窗口内最大触发次数
-  exit_after_success: true        # 达到 max_try 后退出程序
-  reload_each_poll: false         # 每次轮询前是否刷新页面
+  max_try: 1                      # 每次窗口内最大轮询次数（0 表示不限制）
+  exit_after_success: true        # 触发成功后是否退出程序
+  stay_after_success: false       # 触发成功后是否停留在页面（保持浏览器打开，等待用户回车）
+  reload_each_poll: false         # 每次轮询周期开始前是否刷新页面
   windows:                        # 触发窗口列表（可同时配置多个）
 ```
 
@@ -363,25 +365,24 @@ on_success:
 │    │   │   └─ range 窗口：HH:MM-HH:MM 解析，支持跨午夜             │
 │    │   │                                                         │
 │    │   ├─ 状态 = active                                          │
-│    │   │   ├─ goto(target_url)                                   │
+│    │   │   ├─ goto(target_url) + _wait_page_ready()              │
 │    │   │   ├─ run_window()                                       │
-│    │   │   │   ├─ 循环直到窗口结束                                │
+│    │   │   │   ├─ while now < end_time and tried < max_try:      │
+│    │   │   │   │   ├─ [reload_each_poll?] page.reload() +       │
+│    │   │   │   │   │              _wait_page_ready()             │
 │    │   │   │   │   ├─ find_and_click()                           │
 │    │   │   │   │   │   ├─ 遍历 selectors                          │
 │    │   │   │   │   │   ├─ 检查 wait_state 条件                    │
 │    │   │   │   │   │   └─ 按 click_method 点击                    │
 │    │   │   │   │   ├─ post_click_wait_ms 等待                     │
-│    │   │   │   │   ├─ check_success()                            │
-│    │   │   │   │   │   └─ 任一 any_of 条件满足 → 成功             │
-│    │   │   │   │   ├─ 成功 → run_post_flow()                     │
-│    │   │   │   │   │   └─ 执行 on_success 列表 (screenshot/      │
-│    │   │   │   │   │      fill/click/notify/...)                  │
+│    │   │   │   │   ├─ check_success() → 任一 any_of 命中          │
+│    │   │   │   │   ├─ 成功 → run_post_flow() (on_success 列表)  │
 │    │   │   │   │   └─ sleep(poll + random jitter)                │
-│    │   │   │   └─ 达到 max_try → 返回成功                    │
+│    │   │   │   └─ 返回 True(成功) / False(到时/到 max_try)       │
 │    │   │   ├─ exit_after_success? → 退出 / 继续                   │
 │    │   │                                                         │
 │    │   └─ 状态 = idle                                             │
-│    │       └─ 等待至下一窗口开始（最多 60s 轮询一次）               │
+│    │       └─ 等待至下一窗口开始（最多 60s 切片 sleep）             │
 │    │                                                             │
 │    └─ 退出时保存 save_storage_state（可选）                        │
 │       关闭浏览器                                                  │
@@ -392,6 +393,8 @@ on_success:
 
 - **多窗口聚合**：多个 `windows` 配置同时生效，任一激活即进入 active 状态
 - **选择器兜底**：`selectors` 列表按顺序匹配，适合多文案场景
+- **reload_each_poll 语义**：开启后，**每次轮询周期开始前**调用 `page.reload` 并等待触发选择器渲染（最大 15s）；关闭则整个窗口内复用同一页面（首次由 `cmd_run` 初始 goto 加载）
+- **max_try 计数**：上限是**轮询周期数**（无论是否命中元素），`0` 表示无限制；用于在窗口结束前提前止损
 - **抖动防检测**：`jitter_ms` 在固定轮询间隔上叠加随机延迟，不易被风控识别
 - **点击 ≠ 成功**：点击后还需 `success.any_of` 条件验证，防止误判
 - **dry-run 安全**：只读不写，可放心在生产配置上试运行
@@ -443,6 +446,18 @@ macOS 不自带 `timeout`，如需超时控制：
 # 使用 Python 自身的超时
 python -c "__import__('subprocess').run('python web_trigger.py -c config.yaml run', shell=True, timeout=120)"
 ```
+
+### Q: 触发成功后想手动核对页面再关闭，怎么保留浏览器？
+
+设置 `schedule.stay_after_success: true`。触发成功并执行完 `on_success` 后，浏览器**保持打开**停留在当前页面，程序挂起等待你在终端按回车再关闭。配合 `--headful` 使用效果最佳：
+
+```yaml
+schedule:
+  exit_after_success: true
+  stay_after_success: true   # 触发成功后停在页面，按回车才关闭
+```
+
+> 优先级：`stay_after_success=true` 时无视 `exit_after_success`，强制进入"停留等待"分支。非交互环境（nohup / CI / docker）若 stdin 不是 tty，会捕获 `EOFError` 后直接退出。
 
 ---
 
