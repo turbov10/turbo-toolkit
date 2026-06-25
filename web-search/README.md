@@ -1,4 +1,4 @@
-# web_search
+# web-search
 
 A small Python CLI that runs online web searches against pluggable engines and
 emits JSON results.
@@ -6,8 +6,8 @@ emits JSON results.
 ## Setup
 
 ```bash
-cd web_search
-python3.14 -m venv .venv
+cd web-search
+python3.12 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
@@ -32,22 +32,22 @@ your shell instead of using a `.env` file.
 
 ```bash
 # default engine (google)
-.venv/bin/python -m websearch "python argparse tutorial"
+.venv/bin/python cli.py "python argparse tutorial"
 
 # bing (zh-CN market, accessible from China) - needs Azure key
-.venv/bin/python -m websearch bing "python 教程"
+.venv/bin/python cli.py bing "python 教程"
 
 # baidu: scrapes baidu.com directly, no key needed
-.venv/bin/python -m websearch baidu "python 教程"
+.venv/bin/python cli.py baidu "python 教程"
 
 # gemini: model picks results, grounds via Google Search
-.venv/bin/python -m websearch gemini "latest python 3.14 release notes"
+.venv/bin/python cli.py gemini "latest python 3.14 release notes"
 
 # cap result count
-.venv/bin/python -m websearch google "asyncio" -n 5
+.venv/bin/python cli.py google "asyncio" -n 5
 
 # point at a custom env file
-.venv/bin/python -m websearch bing "foo" --env-file /path/to/.env
+.venv/bin/python cli.py bing "foo" --env-file /path/to/.env
 ```
 
 `type` is an enum of `google` | `bing` | `baidu` | `gemini`, defaulting to

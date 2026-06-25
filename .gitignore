@@ -16,6 +16,6 @@ build/
 .idea/
 .vscode/
 
-web_trigger/auth.local.json
-web_trigger/config.local.yaml
-web_trigger/*.png
+web-trigger/auth.local.json
+web-trigger/config.local.yaml
+web-trigger/*.png

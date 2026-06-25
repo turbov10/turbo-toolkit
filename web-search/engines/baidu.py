@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+from typing import cast
 
 import requests
 
@@ -113,7 +114,7 @@ class BaiduEngine(SearchEngine):
                     (
                         el
                         for el in c.select("a[href]")
-                        if (el.get("href") or "").startswith(
+                        if cast(str, el.get("href") or "").startswith(
                             ("http://", "https://"
                         ))
                         and el.get_text(strip=True)
@@ -123,7 +124,7 @@ class BaiduEngine(SearchEngine):
             if a is None:
                 continue
 
-            link = a.get("href", "") or ""
+            link = cast(str, a.get("href", "") or "")
             if not link or link in seen:
                 continue
             if link.startswith("javascript:"):

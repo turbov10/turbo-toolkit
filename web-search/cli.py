@@ -8,8 +8,8 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-from .engines import ENGINES, build_engine
-from .engines.base import SearchEngineError
+from engines import ENGINES, build_engine
+from engines.base import SearchEngineError
 
 DEFAULT_TYPE = "google"
 DEFAULT_LIMIT = 10

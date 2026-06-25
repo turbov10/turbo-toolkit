@@ -1,4 +1,4 @@
-# web_trigger — 定时网页触发与自动化 CLI
+# web-trigger — 定时网页触发与自动化 CLI
 
 基于 **Playwright** 的定时网页自动化工具。按时间表达式（cron / 时间段）开启"触发窗口"，窗口内高频轮询目标元素并触发，触发成功后执行自定义后续流程。
 
@@ -37,7 +37,7 @@
 
 ```bash
 # 1. 进入工具目录（独立环境）
-cd web_trigger
+cd web-trigger
 
 # 2. 安装 Python 依赖
 pip install -r requirements.txt
@@ -480,7 +480,7 @@ schedule:
 
 ```bash
 # 1. 启动 HTTP 服务器
-cd web_trigger
+cd web-trigger
 python -m http.server 8000
 
 # 2. 另开终端，校验配置

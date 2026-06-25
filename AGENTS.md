@@ -2,7 +2,7 @@
 
 ## 架构概述
 
-这是一个**独立工具的 monorepo**。每个顶层目录（如 `web_search/`、`web_trigger/`）都是一个自包含的工具，拥有自己的语言、依赖、配置和 README。
+这是一个**独立工具的 monorepo**。每个顶层目录（如 `web-search/`、`web-trigger/`）都是一个自包含的工具，拥有自己的语言、依赖、配置和 README。
 
 ---
 
@@ -10,8 +10,8 @@
 
 | 目录 | 语言 | 用途 | 关键文件 |
 |---|---|---|---|
-| `web_search/` | Python | CLI 搜索引擎聚合工具，支持 Google / Bing / Baidu / Gemini，输出 JSON 结果 | `websearch/cli.py`, `websearch/engines/*.py`, `.env` |
-| `web_trigger/` | Python | 基于 Playwright 的定时网页自动化工具，按 cron/时间段开窗 → 轮询元素 → 触发 → 后续流程 | `web_trigger.py`, `config.yaml`, `test_page.html` |
+| `web-search/` | Python | CLI 搜索引擎聚合工具，支持 Google / Bing / Baidu / Gemini，输出 JSON 结果 | `cli.py`, `engines/*.py`, `.env` |
+| `web-trigger/` | Python | 基于 Playwright 的定时网页自动化工具，按 cron/时间段开窗 → 轮询元素 → 触发 → 后续流程 | `web_trigger.py`, `config.yaml`, `test_page.html` |
 
 ---
 

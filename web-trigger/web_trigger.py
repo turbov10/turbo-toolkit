@@ -16,21 +16,13 @@ import random
 import time
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
+from typing import Any, cast
+from zoneinfo import ZoneInfo
 
 import yaml
+import requests
 from croniter import croniter
 from playwright.sync_api import TimeoutError as PWTimeout, sync_playwright
-
-try:
-    import requests
-except ImportError:
-    requests = None
-
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:
-    ZoneInfo = None
 
 log = logging.getLogger("web_trigger")
 
@@ -38,9 +30,7 @@ log = logging.getLogger("web_trigger")
 # ----------------------------- 时间与窗口解析 -----------------------------
 
 def now_tz(tz_name: str) -> datetime:
-    if ZoneInfo:
-        return datetime.now(ZoneInfo(tz_name))
-    return datetime.now()
+    return datetime.now(ZoneInfo(tz_name))
 
 
 def parse_range(rng: str, day: datetime):
@@ -59,10 +49,10 @@ def resolve_window(win: dict, now: datetime):
     """返回 (start, end, is_active)：当前所在窗口或下一个即将到来的窗口。"""
     if win.get("cron"):
         dur = timedelta(seconds=win.get("duration_seconds", 120))
-        prev = croniter(win["cron"], now).get_prev(datetime)
+        prev = cast(datetime, croniter(win["cron"], now).get_prev(datetime))
         if prev <= now < prev + dur:
             return prev, prev + dur, True
-        nxt = croniter(win["cron"], now).get_next(datetime)
+        nxt = cast(datetime, croniter(win["cron"], now).get_next(datetime))
         return nxt, nxt + dur, False
 
     if win.get("range"):
@@ -189,9 +179,6 @@ class Automation:
         webhook = step.get("webhook")
         if not webhook:
             log.info("通知: %s", msg)
-            return
-        if requests is None:
-            log.warning("未安装 requests，跳过 webhook")
             return
         try:
             payload = step.get("payload") or {
@@ -334,7 +321,7 @@ def main():
         format="%(asctime)s %(levelname)s %(message)s",
         datefmt="%H:%M:%S",
     )
-    cfg = yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
+    cfg = cast("dict[str, Any]", yaml.safe_load(Path(args.config).read_text(encoding="utf-8")))
     if args.headful:
         cfg["headless"] = False
 
