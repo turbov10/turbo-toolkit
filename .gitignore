@@ -14,6 +14,7 @@ build/
 *.swp
 .DS_Store
 .idea/
+.ruff_cache/
 .vscode/
 
 web-trigger/auth.local.json
