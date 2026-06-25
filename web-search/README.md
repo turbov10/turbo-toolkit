@@ -1,5 +1,8 @@
 # web-search
 
+Part of the [turbo-toolkit](../../) monorepo.
+Licensed under [MIT](../../LICENSE).
+
 A small Python CLI that runs online web searches against pluggable engines and
 emits JSON results.
 

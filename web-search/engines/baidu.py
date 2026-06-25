@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 from typing import cast
 
 import requests
@@ -21,9 +20,7 @@ _BLOCK_HINTS = (
     "timeout-title",
     "timeout-button",
 )
-_SKIP_LINK_HOSTS = (
-    "top.baidu.com/board",
-)
+_SKIP_LINK_HOSTS = ("top.baidu.com/board",)
 _SKIP_TITLE_TEXTS = (
     "换一换",
     "广告",
@@ -49,8 +46,7 @@ class BaiduEngine(SearchEngine):
             from bs4 import BeautifulSoup
         except ImportError as exc:
             raise SearchEngineError(
-                "beautifulsoup4 is not installed; run: "
-                "pip install beautifulsoup4"
+                "beautifulsoup4 is not installed; run: pip install beautifulsoup4"
             ) from exc
 
         params = {"wd": query, "ie": "utf-8", "rn": max(1, min(limit, 50))}
@@ -60,13 +56,9 @@ class BaiduEngine(SearchEngine):
             "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         }
         try:
-            resp = requests.get(
-                _ENDPOINT, params=params, headers=headers, timeout=15
-            )
+            resp = requests.get(_ENDPOINT, params=params, headers=headers, timeout=15)
         except requests.RequestException as exc:
-            raise SearchEngineError(
-                f"baidu request failed: {exc}"
-            ) from exc
+            raise SearchEngineError(f"baidu request failed: {exc}") from exc
 
         if resp.status_code != 200:
             raise SearchEngineError(
@@ -93,9 +85,7 @@ class BaiduEngine(SearchEngine):
 
         for c in candidates:
             ancestor_classes = " ".join(
-                cls
-                for el in c.find_parents()
-                for cls in (el.get("class") or [])
+                cls for el in c.find_parents() for cls in (el.get("class") or [])
             )
             container_classes = " ".join(c.get("class") or [])
             combined_classes = container_classes + " " + ancestor_classes
@@ -115,8 +105,8 @@ class BaiduEngine(SearchEngine):
                         el
                         for el in c.select("a[href]")
                         if cast(str, el.get("href") or "").startswith(
-                            ("http://", "https://"
-                        ))
+                            ("http://", "https://")
+                        )
                         and el.get_text(strip=True)
                     ),
                     None,
@@ -141,9 +131,7 @@ class BaiduEngine(SearchEngine):
             if not snippet:
                 continue
 
-            results.append(
-                SearchResult(title=title, link=link, snippet=snippet)
-            )
+            results.append(SearchResult(title=title, link=link, snippet=snippet))
             if len(results) >= limit:
                 break
 

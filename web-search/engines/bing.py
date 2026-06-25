@@ -22,9 +22,7 @@ class BingEngine(SearchEngine):
             "textFormat": "Raw",
         }
         try:
-            resp = requests.get(
-                _ENDPOINT, headers=headers, params=params, timeout=15
-            )
+            resp = requests.get(_ENDPOINT, headers=headers, params=params, timeout=15)
         except requests.RequestException as exc:
             raise SearchEngineError(f"bing request failed: {exc}") from exc
 

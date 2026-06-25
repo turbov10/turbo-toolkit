@@ -1,0 +1,7 @@
+{
+  "include": ["audio_to_base64.py", "base64_to_audio.py"],
+  "exclude": [".venv", "__pycache__", "build", "dist"],
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": false
+}

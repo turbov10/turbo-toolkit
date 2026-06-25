@@ -1,5 +1,57 @@
 # convert-audio
 
+[English](#english) · [中文](#中文)
+
+---
+
+<a id="english"></a>
+
+## English
+
+Zero-dependency, pure Python standard-library CLI for **audio ⇄ Base64**
+conversion. Useful for embedding audio in JSON payloads, transporting audio
+over text-only channels, and restoring the original binary.
+
+| Script | Direction | Purpose |
+| --- | --- | --- |
+| `audio_to_base64.py` | audio → Base64 | Encode mp3 / wav / flac / m4a / aac / ogg / opus / webm / aiff as Base64 text or Data URI |
+| `base64_to_audio.py` | Base64 → audio | Decode Base64 text (raw, line-wrapped, Data URI, or JSON field) back to a binary audio file |
+
+### Install
+
+```bash
+cd convert-audio
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt   # no-op, stdlib only
+```
+
+### Usage
+
+```bash
+# encode to stdout
+python audio_to_base64.py ./samples/demo.mp3
+
+# encode and save as Data URI
+python audio_to_base64.py ./samples/demo.wav --data-uri -o ./outputs/demo.uri.txt
+
+# decode back
+python base64_to_audio.py ./outputs/demo.uri.txt -o ./outputs/demo.restored.wav
+```
+
+### Notes
+
+- No third-party runtime dependencies; only `base64`, `argparse`, `pathlib`.
+- `base64_to_audio.py` refuses to overwrite an existing output file unless
+  `--force` is passed.
+- Very large files (> a few hundred MB) are loaded fully into memory; use
+  chunked streaming for GB-scale inputs.
+
+---
+
+<a id="中文"></a>
+
+## 中文
+
 一个零依赖、纯 Python 标准库实现的**音频 ↔ Base64** 双向转换工具集。
 
 包含两个互为反向的 CLI 脚本：

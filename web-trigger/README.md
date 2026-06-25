@@ -1,6 +1,104 @@
-# web-trigger — 定时网页触发与自动化 CLI
+# web-trigger — Timed Web Trigger & Automation CLI
+
+[English](#english) · [中文](#中文)
+
+---
+
+<a id="english"></a>
+
+## English
+
+`web-trigger` is a Playwright-based automation CLI for opening **time
+windows** (defined by cron expressions or simple time ranges), polling a
+target DOM element inside each window, triggering it as soon as it appears,
+and then running a declarative **post-flow** (screenshot, JS eval, fill,
+click, webhook notify, …).
+
+Typical uses: form submissions that open at a known time, dashboards that
+refresh on a schedule, dev/staging environment smoke checks, accessibility
+of slots behind a login wall.
+
+### ⚠️ Responsible use — read first
+
+`web-trigger` automates a real browser. You are responsible for everything
+you point it at.
+
+- **Only automate sites and accounts you own or have explicit written
+  permission to automate.** Acting against a third-party site without
+  authorisation may breach its Terms of Service, computer-misuse laws
+  (e.g. CFAA in the US, China's Cybersecurity Law, the UK's Computer
+  Misuse Act, the EU's Directive on attacks against information systems),
+  or anti-bot regulations.
+- **Do not use this tool for "sniping" limited goods, ticket scalping,
+  CAPTCHA bypass, credential stuffing, inventory hoarding, or evading
+  rate limits.** The maintainers will reject contributions that frame the
+  tool for these purposes and may close issues that ask for help with
+  them.
+- **Respect `robots.txt`, `Retry-After`, and the site's published rate
+  limits.** Tune `poll_interval_ms` and `jitter_ms` to a polite cadence.
+  The default config is deliberately conservative.
+- **You are responsible for the data you store.** `auth.json` /
+  `auth.local.json` contain real browser cookies — keep them out of git
+  (already in `.gitignore`) and off shared machines.
+- **No warranty.** This software is provided "as is" under the
+  [MIT License](../../LICENSE). The maintainers are not liable for any
+  damage, account suspension, financial loss, or legal consequence
+  arising from its use.
+
+By using this software you confirm you understand and accept these
+responsibilities. If you are not sure whether your intended use is
+permitted, **stop and consult the target site's Terms of Service or a
+qualified lawyer.**
+
+---
+
+### Install
+
+```bash
+cd web-trigger
+python -m venv .venv
+.venv/bin/pip install -r requirements.txt
+.venv/bin/playwright install chromium
+```
+
+### Quick start
+
+1. Copy and edit the config:
+   ```bash
+   cp config.yaml config.local.yaml
+   $EDITOR config.local.yaml
+   ```
+2. Open a one-shot browser to log in and persist cookies to `auth.json`:
+   ```bash
+   .venv/bin/python web_trigger.py login
+   ```
+3. Start the scheduler (foreground; Ctrl-C to stop):
+   ```bash
+   .venv/bin/python web_trigger.py run --config config.local.yaml
+   ```
+
+See the [中文 section](#中文) below for the full configuration reference,
+CLI command list, troubleshooting, and the local test page.
+
+---
+
+<a id="中文"></a>
+
+## 中文
 
 基于 **Playwright** 的定时网页自动化工具。按时间表达式（cron / 时间段）开启"触发窗口"，窗口内高频轮询目标元素并触发，触发成功后执行自定义后续流程。
+
+### ⚠️ 合规与责任声明（请先阅读）
+
+`web-trigger` 通过真实浏览器执行操作。你需要为每一次运行负责：
+
+- **仅在你拥有或获得明确书面授权的网站/账户上运行**。未经授权对第三方站点自动化可能违反其服务条款、《计算机欺诈与滥用法》（如美国 CFAA、中国《网络安全法》《刑法》第 285/286 条、英国 CMA、欧盟 NIS2 等）以及反爬虫相关法规。
+- **禁止**用于抢购/秒杀、票务黄牛、绕过验证码、撞库、库存囤积、规避限流等场景。维护者将拒绝以此为目的的合并请求，并关闭相关 issue。
+- **尊重 `robots.txt`、`Retry-After` 与目标站点的限流策略**。请调大 `poll_interval_ms` 与 `jitter_ms`，默认配置已是保守值。
+- **妥善保管你的会话**。`auth.json` / `auth.local.json` 含真实浏览器 Cookie（已在 `.gitignore` 中排除），请勿提交到代码仓库或共享机器。
+- **无任何担保**。本软件按"现状"基于 [MIT 许可证](../../LICENSE) 提供。维护者不对因使用本软件造成的任何损失、账户封禁、法律后果负责。
+
+使用本软件即表示你已阅读并接受上述责任。如果你对自己的使用场景是否合规存疑，**请立即停止并咨询目标站点的服务条款或专业律师。**
 
 > ⚠️ 仅用于自动化你**有权操作**的网站/账户，请遵守目标站点条款与当地法律。
 

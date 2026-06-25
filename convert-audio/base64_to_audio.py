@@ -206,7 +206,9 @@ def parse_input_text(raw_text: str, *, json_key: str | None) -> ParsedBase64Inpu
     )
 
 
-def infer_output_path(output_arg: str | None, *, input_path: Path, mime_type: str | None) -> Path:
+def infer_output_path(
+    output_arg: str | None, *, input_path: Path, mime_type: str | None
+) -> Path:
     """
     推断输出路径。
 
@@ -235,8 +237,7 @@ def ensure_can_write(output_path: Path, *, force: bool) -> None:
     """
     if output_path.exists() and not force:
         raise FileExistsError(
-            f"输出文件已存在：{output_path}\n"
-            "如需覆盖，请添加 --force。"
+            f"输出文件已存在：{output_path}\n如需覆盖，请添加 --force。"
         )
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
@@ -290,8 +291,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--json-key",
         help=(
-            "从 JSON 文件中的指定字段读取 Base64。"
-            "支持点路径，例如 data.audio_base64。"
+            "从 JSON 文件中的指定字段读取 Base64。支持点路径，例如 data.audio_base64。"
         ),
     )
 
@@ -351,7 +351,9 @@ def main(argv: list[str] | None = None) -> int:
             print(f"[info] input: {input_path}", file=sys.stderr)
             print(f"[info] source kind: {parsed.source_kind}", file=sys.stderr)
             print(f"[info] mime type: {parsed.mime_type or 'unknown'}", file=sys.stderr)
-            print(f"[info] decoded size: {human_size(len(audio_bytes))}", file=sys.stderr)
+            print(
+                f"[info] decoded size: {human_size(len(audio_bytes))}", file=sys.stderr
+            )
 
         if args.validate_only:
             print("[ok] Base64 校验通过，未写入文件。", file=sys.stderr)

@@ -64,9 +64,7 @@ class GeminiEngine(SearchEngine):
             snippet = " ".join(snippet_parts).strip()
             if not snippet:
                 snippet = (response.text or "").strip()[:300]
-            results.append(
-                SearchResult(title=title, link=uri, snippet=snippet)
-            )
+            results.append(SearchResult(title=title, link=uri, snippet=snippet))
             if len(results) >= limit:
                 break
 

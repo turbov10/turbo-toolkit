@@ -1,0 +1,3 @@
+# convert-audio has no third-party runtime dependencies.
+# The scripts use only the Python standard library (base64, argparse, ...).
+# This file is kept for monorepo consistency and to give CI / tooling a hook.

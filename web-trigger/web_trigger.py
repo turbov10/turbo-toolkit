@@ -8,6 +8,7 @@ web_trigger.py — 定时网页触发与自动化流程 CLI（基于 Playwright�
 
 仅用于自动化你**有权操作**的网站/账户，请遵守目标站点条款与当地法律。
 """
+
 from __future__ import annotations
 
 import argparse
@@ -28,6 +29,7 @@ log = logging.getLogger("web_trigger")
 
 
 # ----------------------------- 时间与窗口解析 -----------------------------
+
 
 def now_tz(tz_name: str) -> datetime:
     return datetime.now(ZoneInfo(tz_name))
@@ -86,6 +88,7 @@ def next_state(windows: list[dict], now: datetime):
 
 # ----------------------------- 自动化核心 -----------------------------
 
+
 class Automation:
     def __init__(self, cfg: dict, dry_run: bool = False):
         self.cfg = cfg
@@ -130,8 +133,10 @@ class Automation:
             try:
                 if "url_contains" in cond and cond["url_contains"] in page.url:
                     return True
-                if "selector_visible" in cond and \
-                        page.locator(cond["selector_visible"]).first.is_visible():
+                if (
+                    "selector_visible" in cond
+                    and page.locator(cond["selector_visible"]).first.is_visible()
+                ):
                     return True
                 if "js" in cond and page.evaluate(cond["js"]):
                     return True
@@ -182,7 +187,9 @@ class Automation:
             return
         try:
             payload = step.get("payload") or {
-                "msg_type": "text", "content": {"text": msg}, "text": msg,
+                "msg_type": "text",
+                "content": {"text": msg},
+                "text": msg,
             }
             requests.post(webhook, json=payload, timeout=10)
         except Exception as exc:
@@ -228,6 +235,7 @@ class Automation:
 
 # ----------------------------- 浏览器与命令 -----------------------------
 
+
 def build_browser(p, cfg):
     browser = p.chromium.launch(
         headless=cfg.get("headless", True),
@@ -262,7 +270,9 @@ def cmd_run(cfg, args):
                     done = auto.run_window(page, end, tz)
                     if done:
                         if stay_after_success:
-                            log.info("✅ 已停留在目标页面（浏览器保持打开），按回车关闭并退出…")
+                            log.info(
+                                "✅ 已停留在目标页面（浏览器保持打开），按回车关闭并退出…"
+                            )
                             try:
                                 input()
                             except EOFError:
@@ -273,8 +283,11 @@ def cmd_run(cfg, args):
                             break
                 else:
                     wait_s = max(1, min((start - now_tz(tz)).total_seconds(), 60))
-                    log.info("等待下个窗口 %s（约 %.0fs 后复查）",
-                             start.strftime("%m-%d %H:%M:%S"), wait_s)
+                    log.info(
+                        "等待下个窗口 %s（约 %.0fs 后复查）",
+                        start.strftime("%m-%d %H:%M:%S"),
+                        wait_s,
+                    )
                     time.sleep(wait_s)
         finally:
             if cfg.get("save_storage_state"):
@@ -307,7 +320,9 @@ def cmd_check(cfg):
 def main():
     parser = argparse.ArgumentParser(description="定时网页触发与自动化 CLI")
     parser.add_argument("-c", "--config", required=True, help="YAML 配置文件")
-    parser.add_argument("--dry-run", action="store_true", help="只检测/点击，不执行后续写操作")
+    parser.add_argument(
+        "--dry-run", action="store_true", help="只检测/点击，不执行后续写操作"
+    )
     parser.add_argument("--headful", action="store_true", help="强制显示浏览器窗口")
     parser.add_argument("-v", "--verbose", action="store_true")
     sub = parser.add_subparsers(dest="command")
@@ -321,7 +336,9 @@ def main():
         format="%(asctime)s %(levelname)s %(message)s",
         datefmt="%H:%M:%S",
     )
-    cfg = cast("dict[str, Any]", yaml.safe_load(Path(args.config).read_text(encoding="utf-8")))
+    cfg = cast(
+        "dict[str, Any]", yaml.safe_load(Path(args.config).read_text(encoding="utf-8"))
+    )
     if args.headful:
         cfg["headless"] = False
 
