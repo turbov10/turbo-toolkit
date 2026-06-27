@@ -1,6 +1,7 @@
 
 .env
 .kilo/
+.tmp/
 .venv/
 __pycache__/
 .python-version
