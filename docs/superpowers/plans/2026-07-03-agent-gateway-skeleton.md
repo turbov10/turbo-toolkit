@@ -1569,6 +1569,8 @@ import agent_gateway
 from agent_gateway.config import GatewayConfig, load_config
 from agent_gateway.mcp_server import build_server
 
+log = logging.getLogger(__name__)
+
 
 def _common_parent(add_help: bool = False) -> argparse.ArgumentParser:
     """ArgumentParser fragment with the flags accepted before OR after the subcommand.
