@@ -312,9 +312,11 @@ def load_config(path: Path | None) -> GatewayConfig:
     if not isinstance(raw, dict):
         raise ValueError(f"gateway config must be a mapping, got {type(raw).__name__}")
 
-    root = Path(raw.get("root", path.parent)).resolve()
+    root = Path(raw.get("root", path.parent))
     if not root.is_absolute():
         root = (path.parent / root).resolve()
+    else:
+        root = root.resolve()
 
     exclude = raw.get("exclude", list(DEFAULT_EXCLUDE))
     if isinstance(exclude, str):
