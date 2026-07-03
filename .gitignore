@@ -4,7 +4,6 @@
 .tmp/
 .venv/
 __pycache__/
-/.python-version
 node_modules/
 dist/
 build/
