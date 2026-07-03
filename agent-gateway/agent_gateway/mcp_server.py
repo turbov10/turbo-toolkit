@@ -33,7 +33,6 @@ def build_server(cfg: GatewayConfig) -> ServerHandle:
     runner_timeouts: dict[str, int] = {}
 
     for tool in discovered:
-        runner.register(tool)
         if tool.namespace in cfg.tools:
             override = cfg.tools[tool.namespace]
             if "timeout_seconds" in override:
@@ -48,6 +47,9 @@ def build_server(cfg: GatewayConfig) -> ServerHandle:
         except Exception as e:
             log.error("register() raised in %s: %s", tool.mcp_tools_path, e)
             continue
+        # Register the runner LAST so a tool that fails to register is not
+        # silently dispatchable via CLI `call` (spec §9 consistency).
+        runner.register(tool)
         log.info("registered namespace %s from %s", tool.namespace, tool.tool_dir.name)
 
     return ServerHandle(
@@ -59,10 +61,15 @@ def build_server(cfg: GatewayConfig) -> ServerHandle:
 
 
 def _reload_module(mcp_tools_path: Path) -> Any:
-    """Re-import a tool's mcp_tools.py (cached) so multiple tools with same name work."""
+    """Re-import a tool's mcp_tools.py, reusing the discovery-cached module.
+
+    Uses the same synthetic name as `discovery._import_module` so the module
+    is loaded once (during discovery) and reused here — preventing
+    double-execution of the tool's top-level code.
+    """
     import importlib.util
     import sys
-    mod_name = f"_agent_gateway_loaded_{mcp_tools_path.parent.name}"
+    mod_name = f"_agent_gateway_tool_{mcp_tools_path.parent.name}"
     if mod_name in sys.modules:
         return sys.modules[mod_name]
     spec = importlib.util.spec_from_file_location(mod_name, mcp_tools_path)

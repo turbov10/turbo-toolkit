@@ -87,6 +87,10 @@ class CapturingMCP:
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             bare_name = func.__name__
             full_name = name or bare_name
+            # Spec §9: collision policy — log WARNING, keep first, skip duplicates.
+            if any(c.full_name == full_name for c in self._captures):
+                log.warning("duplicate tool name %r; keeping first, skipping", full_name)
+                return func
             desc = description
             if not desc and func.__doc__:
                 first_line = func.__doc__.strip().splitlines()

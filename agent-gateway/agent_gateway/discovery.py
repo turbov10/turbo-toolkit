@@ -87,12 +87,22 @@ def _load_one(tool_dir: Path, mcp_tools_path: Path, system_python: Path) -> Disc
 
 
 def _import_module(path: Path) -> ModuleType:
-    spec = importlib.util.spec_from_file_location(
-        f"_agent_gateway_mcp_{path.parent.name}", path
-    )
+    """Import a tool's mcp_tools.py and cache it in sys.modules.
+
+    Using a stable synthetic name and caching means `mcp_server._reload_module`
+    (which uses the same naming scheme) reuses the cached module instead of
+    re-executing the file's top-level code. This matters for P2+ tools that
+    have non-idempotent top-level side effects (logging init, network pools,
+    env var mutation).
+    """
+    mod_name = f"_agent_gateway_tool_{path.parent.name}"
+    if mod_name in sys.modules:
+        return sys.modules[mod_name]
+    spec = importlib.util.spec_from_file_location(mod_name, path)
     if spec is None or spec.loader is None:
         raise DiscoveryError(f"{path}: cannot import")
     module = importlib.util.module_from_spec(spec)
+    sys.modules[mod_name] = module
     spec.loader.exec_module(module)
     return module
 

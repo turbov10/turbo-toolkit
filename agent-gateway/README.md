@@ -5,6 +5,12 @@ Single MCP (Model Context Protocol) server that aggregates every tool in the
 file is auto-discovered and exposed as MCP tools under a `<namespace>__<tool>`
 naming convention.
 
+> **Status: Phase 1 (skeleton) shipped.** The gateway can discover, register,
+> and dispatch tools via stdio MCP and CLI. No real tool in the monorepo has
+> a `mcp_tools.py` yet — those land in Phases 2–5 (image-ocr, convert-audio,
+> web-search, web-trigger). See the
+> [design spec §11](../superpowers/specs/2026-07-03-agent-gateway-mcp-integration-design.md#11-phased-delivery).
+
 See [the design spec](../superpowers/specs/2026-07-03-agent-gateway-mcp-integration-design.md)
 for the full architecture.
 

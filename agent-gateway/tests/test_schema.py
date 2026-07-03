@@ -107,9 +107,32 @@ def test_captures_property_returns_copy() -> None:
 
     def f(x: int) -> int:
         return x
-
     cap.tool(name="ns__f")(f)
     caps1 = cap.captures
     caps2 = cap.captures
     assert caps1 is not caps2
     assert caps1 == caps2
+
+
+def test_duplicate_full_name_keeps_first() -> None:
+    """Spec §9: collision policy — log WARNING, keep first, skip duplicates."""
+    runner = MagicMock(spec=SubprocessRunner)
+    cap = CapturingMCP("agent-gateway", runner)
+
+    def first(x: int) -> int:
+        """first tool"""
+        return x
+
+    def second(x: int) -> int:
+        """second tool"""
+        return x
+
+    cap.tool(name="ns__dup", description="first")(first)
+    cap.tool(name="ns__dup", description="second")(second)
+
+    # Only the first registration survives
+    assert len(cap.captures) == 1
+    assert cap.captures[0].description == "first"
+    # FastMCP also sees only one
+    tools = cap.real._tool_manager.list_tools()
+    assert len(tools) == 1
