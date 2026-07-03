@@ -28,11 +28,15 @@ python -m venv .venv
 
 ## Configure your Agent
 
-In Claude Desktop / Cursor / Cline, point the MCP server at:
+In Claude Desktop / Cursor / Cline, add this entry to your MCP config:
 
 ```json
 {
-  "command": "/absolute/path/to/agent-gateway/.venv/bin/python",
-  "args": ["-m", "agent_gateway", "serve"]
+  "mcpServers": {
+    "agent-gateway": {
+      "command": "/absolute/path/to/agent-gateway/.venv/bin/python",
+      "args": ["-m", "agent_gateway", "serve"]
+    }
+  }
 }
 ```
