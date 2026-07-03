@@ -372,6 +372,8 @@ Write `agent-gateway/tests/conftest.py`:
 ```python
 """Shared pytest fixtures."""
 from __future__ import annotations
+import argparse
+import json
 from pathlib import Path
 import textwrap
 import pytest
@@ -394,9 +396,18 @@ def write_mcp_tools(
     fn_name: str = "hello",
     return_value: str = "world",
 ) -> Path:
-    """Write a minimal valid mcp_tools.py in `tool_dir` and return the path."""
+    """Write a minimal valid mcp_tools.py in `tool_dir` and return the path.
+
+    The stub includes both the `register(mcp)` function (for gateway discovery)
+    and an `if __name__ == "__main__"` block that handles the gateway's
+    `<python> mcp_tools.py call --name X --args JSON` invocation. Without the
+    __main__ block, the subprocess would produce empty stdout and the runner
+    would fail with "invalid JSON from tool".
+    """
     path = tool_dir / "mcp_tools.py"
-    path.write_text(textwrap.dedent(f"""
+    path.write_text(textwrap.dedent(f'''
+        import argparse
+        import json
         TOOL_NAMESPACE = {namespace!r}
 
         def {fn_name}(name: str = "world") -> str:
@@ -407,7 +418,19 @@ def write_mcp_tools(
                 name=f"{{TOOL_NAMESPACE}}__{fn_name}",
                 description="stub tool",
             )({fn_name})
-    """).lstrip())
+
+        if __name__ == "__main__":
+            _parser = argparse.ArgumentParser()
+            _sub = _parser.add_subparsers(dest="cmd", required=True)
+            _call_p = _sub.add_parser("call")
+            _call_p.add_argument("--name", required=True)
+            _call_p.add_argument("--args", default="{{}}")
+            _ns = _parser.parse_args()
+            if _ns.cmd == "call":
+                _func = globals()[_ns.name]
+                _result = _func(**json.loads(_ns.args))
+                print(json.dumps(_result, ensure_ascii=False))
+    ''').lstrip())
     return path
 ```
 
