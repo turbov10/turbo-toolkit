@@ -66,6 +66,8 @@ def _reload_module(mcp_tools_path: Path) -> Any:
     if mod_name in sys.modules:
         return sys.modules[mod_name]
     spec = importlib.util.spec_from_file_location(mod_name, mcp_tools_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"cannot import module from {mcp_tools_path}")
     module = importlib.util.module_from_spec(spec)
     sys.modules[mod_name] = module
     spec.loader.exec_module(module)

@@ -74,8 +74,10 @@ async def test_serve_calls_tool_via_mcp(tmp_path: Path) -> None:
             await session.initialize()
             result = await session.call_tool("alpha__echo", {"name": "x"})
             assert not result.isError
-            text = result.content[0].text
-            assert json.loads(text) == {"value": "pong"}
+            from mcp.types import TextContent
+            first = result.content[0]
+            assert isinstance(first, TextContent)
+            assert json.loads(first.text) == {"value": "pong"}
 
 
 @pytest.mark.asyncio

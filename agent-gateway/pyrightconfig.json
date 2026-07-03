@@ -1,5 +1,6 @@
 {
   "include": ["agent_gateway", "tests"],
   "pythonVersion": "3.12",
-  "typeCheckingMode": "basic"
+  "typeCheckingMode": "basic",
+  "extraPaths": [".venv/lib/python3.12/site-packages"]
 }

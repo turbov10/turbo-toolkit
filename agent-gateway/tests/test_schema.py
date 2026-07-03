@@ -57,6 +57,7 @@ def test_proxy_preserves_signature_for_schema() -> None:
     cap.tool(name="ns__greet")(greet)
     real = cap.real
     tool_obj = real._tool_manager.get_tool("ns__greet")
+    assert tool_obj is not None
 
     # The registered function should have type hints so FastMCP builds a schema
     fn = tool_obj.fn
@@ -78,6 +79,7 @@ def test_proxy_invokes_runner_with_full_name_and_args() -> None:
     cap.tool(name="ns__echo")(echo)
     real = cap.real
     tool_obj = real._tool_manager.get_tool("ns__echo")
+    assert tool_obj is not None
 
     result = tool_obj.fn(text="hi")
     runner.run.assert_called_once()
