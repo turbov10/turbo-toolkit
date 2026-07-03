@@ -2,6 +2,7 @@ from __future__ import annotations
 import json
 import subprocess
 import sys
+import textwrap
 from pathlib import Path
 
 import pytest
@@ -73,3 +74,53 @@ def test_info_with_known_tool(fake_monorepo: Path) -> None:
     assert "alpha__hello" in result.stdout
     # Should include the function signature / parameter schema
     assert "name" in result.stdout
+
+
+def test_call_with_known_tool(fake_monorepo: Path) -> None:
+    from tests.conftest import write_mcp_tools
+    # Tool returns the literal string "world" regardless of input
+    write_mcp_tools(fake_monorepo / "alpha-tool", "alpha", fn_name="hello", return_value="world")
+    result = run_cli(
+        "call", "alpha__hello", "--args", '{"name": "x"}',
+        "--root", str(fake_monorepo),
+    )
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload == "world"
+
+
+def test_call_unknown_tool(tmp_path: Path) -> None:
+    result = run_cli("call", "missing__nope", "--root", str(tmp_path))
+    assert result.returncode != 0
+    assert "not found" in result.stderr.lower() or "not found" in result.stdout.lower()
+
+
+def test_call_propagates_tool_error(fake_monorepo: Path) -> None:
+    from tests.conftest import write_mcp_tools
+    # Tool that raises
+    tool_dir = fake_monorepo / "alpha-tool"
+    (tool_dir / "mcp_tools.py").write_text(textwrap.dedent("""
+        import argparse
+        import json
+        TOOL_NAMESPACE = "alpha"
+        def boom() -> str:
+            raise RuntimeError("kaboom")
+        def register(mcp):
+            mcp.tool(name="alpha__boom", description="explodes")(boom)
+        if __name__ == "__main__":
+            _parser = argparse.ArgumentParser()
+            _sub = _parser.add_subparsers(dest="cmd", required=True)
+            _call_p = _sub.add_parser("call")
+            _call_p.add_argument("--name", required=True)
+            _call_p.add_argument("--args", default="{}")
+            _ns = _parser.parse_args()
+            if _ns.cmd == "call":
+                _func = globals()[_ns.name]
+                _result = _func(**json.loads(_ns.args))
+                print(json.dumps(_result, ensure_ascii=False))
+    """).lstrip())
+    result = run_cli("call", "alpha__boom", "--root", str(fake_monorepo))
+    assert result.returncode != 0
+    # stderr should contain the original error
+    combined = (result.stdout + result.stderr).lower()
+    assert "kaboom" in combined

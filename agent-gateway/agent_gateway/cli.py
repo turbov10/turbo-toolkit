@@ -126,6 +126,30 @@ def cmd_info(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_call(args: argparse.Namespace) -> int:
+    handle = _build_handle(args)
+    rec = next((c for c in handle.captures if c.full_name == args.full_name), None)
+    if rec is None:
+        print(f"tool not found: {args.full_name}", file=sys.stderr)
+        return 2
+    cfg = resolve_config(args)
+    namespace = rec.full_name.split("__", 1)[0]
+    timeout = handle.runner_timeouts.get(namespace, cfg.timeout_seconds)
+    try:
+        parsed_args = json.loads(args.args)
+        if not isinstance(parsed_args, dict):
+            raise ValueError("--args must be a JSON object")
+        result = handle.runner.run(args.full_name, parsed_args, timeout=timeout)
+    except json.JSONDecodeError as e:
+        print(f"invalid --args JSON: {e}", file=sys.stderr)
+        return 2
+    except Exception as e:
+        print(f"tool error: {e}", file=sys.stderr)
+        return 4
+    print(json.dumps(result, ensure_ascii=False))
+    return 0
+
+
 def cmd_serve(args: argparse.Namespace) -> int:
     handle = _build_handle(args)
     log.info("serving %d tools on stdio", len(handle.captures))
@@ -147,8 +171,8 @@ _DISPATCH = {
     "version": cmd_version,
     "list": cmd_list,
     "info": cmd_info,
+    "call": cmd_call,
     "serve": cmd_serve,
-    # "call" added in Task 9
 }
 
 
