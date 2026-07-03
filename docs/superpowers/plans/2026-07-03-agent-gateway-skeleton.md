@@ -1044,7 +1044,7 @@ def _make_proxy(
     FastMCP introspects the registered function's `__signature__` and
     `__annotations__` to build the input JSON schema, so we copy them across.
     """
-    sig = inspect.signature(source_func)
+    sig = inspect.signature(source_func, eval_str=True)
 
     def proxy(**kwargs: Any) -> Any:
         return runner.run(full_name, kwargs)
