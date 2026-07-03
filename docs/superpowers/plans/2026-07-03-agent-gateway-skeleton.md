@@ -482,7 +482,9 @@ def test_venv_python_attribute(fake_monorepo: Path) -> None:
     write_mcp_tools(fake_monorepo / "alpha-tool", "alpha")
     tools = discover_all(fake_monorepo)
     t = tools[0]
-    assert t.venv_python.name in ("python", "python.exe")
+    # sys.executable can be 'python', 'python3.12', 'python.exe', etc.
+    import re
+    assert re.match(r"^python(\d+(\.\d+)?)?(\.exe)?$", t.venv_python.name), t.venv_python.name
     assert t.venv_python.parent.name in ("bin", "Scripts")
     # Falls back to sys.executable when no .venv exists
     assert t.venv_python.exists() or t.venv_python == t.system_python
