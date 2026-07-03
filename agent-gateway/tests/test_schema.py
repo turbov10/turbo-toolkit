@@ -2,8 +2,6 @@ from __future__ import annotations
 from typing import Literal
 from unittest.mock import MagicMock
 
-import pytest
-
 from agent_gateway.runner import SubprocessRunner
 from agent_gateway.schema import CapturingMCP, ToolRecord, _make_proxy
 

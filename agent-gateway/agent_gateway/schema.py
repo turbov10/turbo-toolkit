@@ -87,7 +87,11 @@ class CapturingMCP:
         def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
             bare_name = func.__name__
             full_name = name or bare_name
-            desc = description or (func.__doc__ or "").strip().splitlines()[0] if func.__doc__ else None
+            desc = description
+            if not desc and func.__doc__:
+                first_line = func.__doc__.strip().splitlines()
+                if first_line:
+                    desc = first_line[0]
             proxy = _make_proxy(full_name, bare_name, self._runner, func)
             self._real.add_tool(
                 fn=proxy,
