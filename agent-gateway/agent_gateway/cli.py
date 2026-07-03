@@ -58,30 +58,6 @@ def build_parser() -> argparse.ArgumentParser:
     return p
 
 
-def build_parser() -> argparse.ArgumentParser:
-    common = _common_parent(add_help=False)
-    p = argparse.ArgumentParser(
-        prog="agent-gateway",
-        description="Single MCP server aggregating every tool in turbo-toolkit.",
-        parents=[common],
-    )
-    sub = p.add_subparsers(dest="cmd", required=True)
-
-    sub.add_parser("serve", help="start the stdio MCP server", parents=[common])
-    sub.add_parser("list", help="list all discovered tools", parents=[common])
-    sub.add_parser("version", help="print gateway version", parents=[common])
-
-    call_p = sub.add_parser("call", help="invoke a single tool by full name",
-                            parents=[common])
-    call_p.add_argument("full_name")
-    call_p.add_argument("--args", default="{}")
-
-    info_p = sub.add_parser("info", help="show one tool's schema", parents=[common])
-    info_p.add_argument("full_name")
-
-    return p
-
-
 def resolve_config(args: argparse.Namespace) -> GatewayConfig:
     cfg = load_config(args.config)
     if args.root is not None:
