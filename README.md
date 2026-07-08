@@ -57,32 +57,32 @@ processes, each running in **its own venv** (per `AGENTS.md` §1).
 ### Sequence: your LLM agent → `image-ocr` via the gateway
 
 ```
-       你的 LLM Agent                            agent-gateway                            image-ocr/.venv
-            │                                          │                                          │
-            │── spawn ───────────────────────────────▶│                                          │
-            │  (.venv/bin/python -m agent_gateway serve)│                                          │
-            │                                          │ build_server():                          │
-            │                                          │   for each tool's mcp_tools.py:          │
-            │                                          │     module.register(capturing)           │
-            │                                          │     runner.register(tool)                 │
-            │                                          │ fastmcp.run(transport="stdio")           │
-            │                                          │                                          │
-            │── JSON-RPC tools/list ────────────────▶│                                          │
-            │◀─ {tools:[{name:"image-ocr__ocr_image",inputSchema:{…}}]} ──│                                    │
-            │                                          │                                          │
-            │── JSON-RPC tools/call ────────────────▶│                                          │
-            │  name="image-ocr__ocr_image"            │                                          │
-            │  args={image_path:"…/p.png",            │ proxy(**kwargs) → runner.run(...)         │
-            │         detail:"text"}                  │   └─ subprocess.run([                    │
-            │                                          │          python, image-ocr/mcp_tools.py, │
-            │                                          │           "call", "--name","ocr_image",  │
-            │                                          │           "--args","{…}"]) ─────────────▶│
-            │                                          │                                          │ ocr_image(...)
-            │                                          │                                          │ json.dump → stdout
-            │                                          │ ◀── stdout='{"text":"Hello OCR"}' ───────│
-            │                                          │ json.loads(stdout)                       │
-            │◀─ {content:[{text:"{…}"}]} ──────────────│                                          │
-            │  → 把 text 喂回 LLM，继续推理               │                                          │
+       你的 LLM Agent                                               agent-gateway                             image-ocr/.venv
+            │                                                             │                                          │
+            │── spawn ───────────────────────────────────────────────────▶│                                          │
+            │  (.venv/bin/python -m agent_gateway serve)                  │                                          │
+            │                                                             │ build_server():                          │
+            │                                                             │   for each tool's mcp_tools.py:          │
+            │                                                             │     module.register(capturing)           │
+            │                                                             │     runner.register(tool)                │
+            │                                                             │ fastmcp.run(transport="stdio")           │
+            │                                                             │                                          │
+            │── JSON-RPC tools/list ─────────────────────────────────────▶│                                          │
+            │◀─ {tools:[{name:"image-ocr__ocr_image",inputSchema:{…}}]} ──│                                          │
+            │                                                             │                                          │
+            │── JSON-RPC tools/call ─────────────────────────────────────▶│                                          │
+            │  name="image-ocr__ocr_image"                                │                                          │
+            │  args={image_path:"…/p.png",                                │ proxy(**kwargs) → runner.run(...)        │
+            │         detail:"text"}                                      │   └─ subprocess.run([                    │
+            │                                                             │          python, image-ocr/mcp_tools.py, │
+            │                                                             │           "call", "--name","ocr_image",  │
+            │                                                             │           "--args","{…}"]) ─────────────▶│
+            │                                                             │                                          │ ocr_image(...)
+            │                                                             │                                          │ json.dump → stdout
+            │                                                             │ ◀── stdout='{"text":"Hello OCR"}' ───────│
+            │                                                             │ json.loads(stdout)                       │
+            │◀─ {content:[{text:"{…}"}]} ─────────────────────────────────│                                          │
+            │  → feedback text to LLM, continue inferring                 │                                          │
 ```
 
 ### Wire it up
