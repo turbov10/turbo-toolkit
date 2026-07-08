@@ -1,0 +1,7 @@
+{
+  "include": ["image_ocr", "mcp_tools.py", "tests"],
+  "exclude": [".venv", "__pycache__", "outputs"],
+  "pythonVersion": "3.12",
+  "typeCheckingMode": "basic",
+  "reportMissingTypeStubs": false
+}
