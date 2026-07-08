@@ -13,11 +13,12 @@ agent-gateway contract (see
 ``docs/superpowers/specs/2026-07-03-agent-gateway-mcp-integration-design.md``
 §8.2 / §8.3).
 """
+
 from __future__ import annotations
 
 import argparse
 import base64 as _base64_stdlib  # noqa: F401  (forces `base64` into globals
-import json                            # for the `call` subcommand's __main__)
+import json  # for the `call` subcommand's __main__)
 import sys
 from pathlib import Path
 
@@ -30,6 +31,7 @@ TOOL_NAMESPACE = "convert-audio"
 # ---------------------------------------------------------------------------
 # Pure functions (importable, testable, callable directly)
 # ---------------------------------------------------------------------------
+
 
 def audio_to_base64(
     input_path: str,
@@ -94,6 +96,7 @@ def base64_to_audio(
     # Use os.path.isfile (returns False on long strings instead of raising)
     # instead of Path.is_file() which calls os.stat() and raises ENAMETOOLONG.
     import os
+
     raw_text = read_text_file(raw_path) if os.path.isfile(raw_path) else input
 
     parsed = parse_input_text(raw_text, json_key=json_key)
@@ -117,6 +120,7 @@ def base64_to_audio(
 # Gateway integration
 # ---------------------------------------------------------------------------
 
+
 def register(mcp: "FastMCP") -> None:
     """Register both tools on the given MCP server."""
     mcp.tool(
@@ -132,6 +136,7 @@ def register(mcp: "FastMCP") -> None:
 # ---------------------------------------------------------------------------
 # Subprocess entrypoint (invoked by agent-gateway's SubprocessRunner)
 # ---------------------------------------------------------------------------
+
 
 def _cli_call(name: str, args_json: str) -> int:
     fn = getattr(sys.modules[__name__], name, None)

@@ -5,6 +5,7 @@ that the gateway's ``SubprocessRunner`` would invoke).  They do NOT spawn a
 subprocess — subprocess + end-to-end behaviour is covered by
 ``agent-gateway/tests/test_serve_integration.py``.
 """
+
 from __future__ import annotations
 
 import json
@@ -35,6 +36,7 @@ def tiny_wav(tmp_path: Path) -> Path:
 # ---------------------------------------------------------------------------
 # audio_to_base64
 # ---------------------------------------------------------------------------
+
 
 def test_audio_to_base64_returns_b64_and_meta(tiny_wav: Path) -> None:
     out = audio_to_base64(str(tiny_wav), wrap=0)
@@ -69,8 +71,9 @@ def test_audio_to_base64_data_uri(tiny_wav: Path) -> None:
 def test_audio_to_base64_data_uri_mime_audio_wav(tiny_wav: Path) -> None:
     """MIME may be audio/wav or audio/x-wav depending on platform mimetypes."""
     out = audio_to_base64(str(tiny_wav), data_uri=True)
-    assert out["result"].startswith("data:audio/x-wav;base64,") or \
-           out["result"].startswith("data:audio/wav;base64,")
+    assert out["result"].startswith("data:audio/x-wav;base64,") or out[
+        "result"
+    ].startswith("data:audio/wav;base64,")
 
 
 def test_audio_to_base64_no_wrap(tiny_wav: Path) -> None:
@@ -81,6 +84,7 @@ def test_audio_to_base64_no_wrap(tiny_wav: Path) -> None:
 # ---------------------------------------------------------------------------
 # base64_to_audio
 # ---------------------------------------------------------------------------
+
 
 def test_base64_to_audio_plain_text_roundtrip(tiny_wav: Path, tmp_path: Path) -> None:
     encoded = audio_to_base64(str(tiny_wav), wrap=0)["result"]
@@ -98,7 +102,9 @@ def test_base64_to_audio_data_uri_input(tmp_path: Path, tiny_wav: Path) -> None:
     assert Path(result["output_path"]).suffix == ".wav"
 
 
-def test_base64_to_audio_data_uri_suffix_from_mime(tmp_path: Path, tiny_wav: Path) -> None:
+def test_base64_to_audio_data_uri_suffix_from_mime(
+    tmp_path: Path, tiny_wav: Path
+) -> None:
     """Suffix defaulting rules: when output has no extension, use MIME map."""
     encoded = audio_to_base64(str(tiny_wav), data_uri=True)["result"]
     result = base64_to_audio(encoded, output_path=str(tmp_path / "no-ext"))
@@ -119,7 +125,9 @@ def test_base64_to_audio_json_field(tiny_wav: Path, tmp_path: Path) -> None:
     payload = json.dumps({"nested": {"audio": encoded}})
     out = tmp_path / "from-json.wav"
     result = base64_to_audio(
-        payload, output_path=str(out), json_key="nested.audio",
+        payload,
+        output_path=str(out),
+        json_key="nested.audio",
     )
     assert result["bytes"] == tiny_wav.stat().st_size
     assert out.read_bytes() == tiny_wav.read_bytes()
@@ -161,6 +169,7 @@ def test_base64_to_audio_invalid_b64_raises(tmp_path: Path) -> None:
 # Subprocess entrypoint smoke test (matches design spec §4 contract rule 5)
 # ---------------------------------------------------------------------------
 
+
 def test_cli_call_via_subprocess(tiny_wav: Path) -> None:
     """Run `mcp_tools.py call` as a subprocess — contract §4 rule 5."""
     import os
@@ -175,10 +184,14 @@ def test_cli_call_via_subprocess(tiny_wav: Path) -> None:
         _sys.executable,
         str(tool_dir / "mcp_tools.py"),
         "call",
-        "--name", "audio_to_base64",
-        "--args", json.dumps({"input_path": str(tiny_wav)}),
+        "--name",
+        "audio_to_base64",
+        "--args",
+        json.dumps({"input_path": str(tiny_wav)}),
     ]
-    proc = subprocess.run(cmd, capture_output=True, text=True, env=env, cwd=str(tool_dir))
+    proc = subprocess.run(
+        cmd, capture_output=True, text=True, env=env, cwd=str(tool_dir)
+    )
     assert proc.returncode == 0, proc.stderr
     payload = json.loads(proc.stdout)
     assert "wav" in payload["meta"]["mime"]
@@ -193,9 +206,19 @@ def test_cli_call_unknown_tool_exits_2(tmp_path: Path) -> None:
     env = dict(os.environ)
     env["PYTHONPATH"] = str(tool_dir) + os.pathsep + env.get("PYTHONPATH", "")
     proc = subprocess.run(
-        [_sys.executable, str(tool_dir / "mcp_tools.py"),
-         "call", "--name", "nonexistent", "--args", "{}"],
-        capture_output=True, text=True, env=env, cwd=str(tool_dir),
+        [
+            _sys.executable,
+            str(tool_dir / "mcp_tools.py"),
+            "call",
+            "--name",
+            "nonexistent",
+            "--args",
+            "{}",
+        ],
+        capture_output=True,
+        text=True,
+        env=env,
+        cwd=str(tool_dir),
     )
     assert proc.returncode == 2
     assert "unknown tool" in proc.stderr
@@ -205,6 +228,8 @@ def test_cli_call_unknown_tool_exits_2(tmp_path: Path) -> None:
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def _base64_urlsafe(raw: bytes) -> bytes:
     import base64
+
     return base64.urlsafe_b64encode(raw)
