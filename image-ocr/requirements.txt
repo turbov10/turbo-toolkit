@@ -1,0 +1,16 @@
+# Core
+Pillow>=10.0
+
+# OCR backends (install whichever you need; both are optional, but at least
+# rapidocr-onnxruntime is required for the "rapidocr" / "auto" engine)
+# Pillow HEIC support:
+#   pillow-heif>=0.16 ; platform_system == "Darwin" ; python_version < "3.13"
+rapidocr-onnxruntime>=1.3
+onnxruntime>=1.15
+
+# macOS Vision backend (only used when engine="vision")
+# pyobjc-framework-Vision>=10.0 ; sys_platform == "darwin"
+# pyobjc-framework-CoreImage>=10.0 ; sys_platform == "darwin"
+
+# Tests
+pytest>=8.0

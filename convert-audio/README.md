@@ -216,6 +216,45 @@ python base64_to_audio.py ./outputs/demo.uri.txt -o ./outputs/demo.restored.wav
 
 ---
 
+## MCP / agent-gateway 集成
+
+This tool is also exposed as two MCP tools via the repository-level
+[`agent-gateway`](../agent-gateway/) gateway (Phase P3 of the integration
+spec). The CLI scripts above remain the canonical human-facing interface;
+MCP is for LLM agents (Claude Desktop / Cursor / Cline / 自建 agent).
+
+### Exposed tools
+
+| MCP tool | Purpose |
+| --- | --- |
+| `convert-audio__audio_to_base64` | Encode an audio file → `{result, meta}` where `result` is plain Base64 (or `data:<mime>;base64,...` when `data_uri=true`) and `meta = {size, mime, length}`. |
+| `convert-audio__base64_to_audio` | Decode Base64 / Data URI / JSON-field text → audio file; returns `{output_path, bytes}`. |
+
+### Usage through the gateway
+
+```bash
+cd ../agent-gateway
+.venv/bin/python -m agent_gateway list --root .. | grep convert-audio
+.venv/bin/python -m agent_gateway info convert-audio__audio_to_base64 --root ..
+
+# one-shot direct invocation (same code path the gateway uses for MCP calls)
+.venv/bin/python -m agent_gateway call \
+    convert-audio__audio_to_base64 \
+    --args '{"input_path":"/abs/path/to/clip.wav"}' --root ..
+```
+
+### Tests
+
+```bash
+.venv/bin/python -m pytest tests/ -v
+```
+
+Covers the two MCP tool functions directly, plus the spec-§4 contract
+that `<tool_dir>/mcp_tools.py call --name <bare> --args '<json>'` exits 0 on
+success / 2 on unknown tool, with stdout = JSON result and stderr = error.
+
+---
+
 ## 常见问题
 
 - **输出文件已存在？** `base64_to_audio.py` 默认拒绝覆盖，需加 `--force`。
