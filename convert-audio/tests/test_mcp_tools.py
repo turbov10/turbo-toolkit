@@ -8,7 +8,6 @@ subprocess — subprocess + end-to-end behaviour is covered by
 from __future__ import annotations
 
 import json
-import struct
 import wave
 from pathlib import Path
 

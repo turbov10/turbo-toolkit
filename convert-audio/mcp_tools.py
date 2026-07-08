@@ -20,7 +20,6 @@ import base64 as _base64_stdlib  # noqa: F401  (forces `base64` into globals
 import json                            # for the `call` subcommand's __main__)
 import sys
 from pathlib import Path
-from typing import Any
 
 if False:  # pragma: no cover — TYPE_CHECKING guard only
     from mcp.server.fastmcp import FastMCP
